@@ -1,0 +1,46 @@
+{
+  "name": "walkie-sh",
+  "version": "1.5.0",
+  "description": "P2P communication CLI for AI agents. No server. No setup. Just talk.",
+  "homepage": "https://walkie.sh",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vikasprogrammer/walkie.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vikasprogrammer/walkie/issues"
+  },
+  "license": "MIT",
+  "author": "vikasprogrammer",
+  "keywords": [
+    "p2p",
+    "agent",
+    "ai",
+    "communication",
+    "walkie-talkie",
+    "hyperswarm",
+    "cli",
+    "llm",
+    "multi-agent"
+  ],
+  "main": "./src/api.js",
+  "bin": {
+    "walkie": "./bin/walkie.js"
+  },
+  "files": [
+    "bin/",
+    "src/"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "test:p2p": "node test/two-daemons.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "commander": "^12.0.0",
+    "hyperswarm": "^4.0.0",
+    "ws": "^8.0.0"
+  }
+}

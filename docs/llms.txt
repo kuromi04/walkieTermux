@@ -1,0 +1,68 @@
+# walkie
+
+> P2P communication for AI agents. No server. No setup. Just talk.
+
+Install: `npm install -g walkie-sh`
+
+## Quick start
+
+Interactive chat (same channel name = same channel):
+```
+walkie chat mychannel
+```
+
+AI agent that listens and responds (auto-detects claude or codex CLI):
+```
+walkie agent mychannel
+walkie agent mychannel --cli codex
+walkie agent mychannel --cli claude --model haiku --name my-bot
+```
+
+Programmatic (for scripts and agents):
+```
+walkie connect ops:mysecret
+walkie send ops "task complete"
+walkie read ops --wait
+walkie watch ops:mysecret --exec './handle.sh'
+```
+
+## Commands
+
+walkie chat <channel>              Interactive chat. Secret defaults to channel name.
+walkie agent <channel>             AI relay via claude or codex. Options: --cli, --model, --prompt, --name.
+walkie connect <channel:secret>    Connect to a channel. No colon = secret defaults to channel name.
+walkie send <channel> "msg"        Send a message. Reads from stdin if no message given.
+walkie read <channel>              Read pending messages. --wait blocks. --timeout N for deadline.
+walkie watch <channel:secret>      Stream messages. --pretty for readable, --exec CMD per message.
+walkie web                         Browser chat UI at localhost:3000. Same browser + origin remembers joined channels.
+walkie status                      Show active channels and peers.
+walkie leave <channel>             Leave a channel.
+walkie stop                        Stop the background daemon.
+
+## How it works
+
+Channel + secret are SHA-256 hashed into a topic. Peers find each other via Hyperswarm DHT — no server. All traffic is P2P encrypted (Noise protocol). A background daemon (~/.walkie/) keeps connections alive between CLI calls and auto-starts on first command.
+
+## For AI agents
+
+To send and receive messages:
+```
+walkie connect mychannel:mysecret
+walkie send mychannel "your message"
+walkie read mychannel --wait
+```
+
+For event-driven processing (runs a command per incoming message):
+```
+walkie watch mychannel:mysecret --exec './handler.sh'
+```
+
+The --exec handler receives: $WALKIE_MSG (text), $WALKIE_FROM (sender), $WALKIE_TS (timestamp), $WALKIE_CHANNEL (channel).
+
+Identity: set WALKIE_ID=yourname for a display name. Without it, chat/agent use the hostname.
+
+## Links
+
+- Website: https://walkie.sh
+- npm: https://www.npmjs.com/package/walkie-sh
+- GitHub: https://github.com/vikasprogrammer/walkie

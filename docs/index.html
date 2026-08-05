@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>walkie — P2P comms for AI agents</title>
+  <meta name="description" content="Zero-infrastructure peer-to-peer communication for AI agents. No server. No setup. Just talk.">
+  <meta property="og:title" content="walkie — P2P comms for AI agents">
+  <meta property="og:description" content="Zero-infrastructure peer-to-peer communication for AI agents. No server. No setup. Just talk.">
+  <meta property="og:url" content="https://walkie.sh">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0a0a0a;
+      --surface: #141414;
+      --border: #222;
+      --text: #e0e0e0;
+      --muted: #888;
+      --accent: #22c55e;
+      --accent-dim: #16a34a;
+      --mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Hero */
+    .hero {
+      padding: 80px 0 60px;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: 3.5rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 16px;
+      color: var(--accent);
+    }
+
+    .hero .tagline {
+      font-size: 1.25rem;
+      color: var(--muted);
+      max-width: 500px;
+      margin: 0 auto 40px;
+    }
+
+    .install-box {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 20px;
+      font-family: var(--mono);
+      font-size: 1rem;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .install-box:hover {
+      border-color: var(--accent);
+    }
+
+    .install-box .dollar {
+      color: var(--muted);
+      user-select: none;
+    }
+
+    .install-box .copy-btn {
+      color: var(--muted);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 0.8rem;
+      transition: color 0.2s;
+    }
+
+    .install-box:hover .copy-btn {
+      color: var(--accent);
+    }
+
+    /* Points */
+    .points {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+      padding: 40px 0;
+    }
+
+    .point {
+      text-align: center;
+    }
+
+    .point .label {
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+
+    .point .value {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    /* Section headers */
+    .section-header {
+      font-size: 1.1rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    /* Use cases */
+    .use-cases {
+      padding: 60px 0 40px;
+    }
+
+    .use-case-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .use-case {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px;
+    }
+
+    .use-case h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .use-case p {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 12px;
+      line-height: 1.5;
+    }
+
+    .use-case code {
+      display: block;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 14px;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      line-height: 1.7;
+      color: var(--text);
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    .use-case code .c {
+      color: #555;
+    }
+
+    /* Getting started */
+    .getting-started {
+      padding: 40px 0;
+    }
+
+    .workflow {
+      margin-bottom: 32px;
+    }
+
+    .workflow:last-child {
+      margin-bottom: 0;
+    }
+
+    .workflow h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .workflow .desc {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    .terminals {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .terminal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .terminal.full {
+      grid-column: 1 / -1;
+    }
+
+    .terminal-header {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .terminal-header .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      opacity: 0.7;
+    }
+
+    .terminal-body {
+      padding: 16px;
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      line-height: 1.8;
+    }
+
+    .terminal-body .cmd {
+      color: var(--text);
+    }
+
+    .terminal-body .cmd::before {
+      content: '$ ';
+      color: var(--accent);
+    }
+
+    .terminal-body .output {
+      color: var(--muted);
+    }
+
+    .terminal-body .blank {
+      height: 1.8em;
+    }
+
+    .terminal-body .dim {
+      color: #444;
+    }
+
+    .terminal-body .green {
+      color: var(--accent);
+    }
+
+    /* Web UI */
+    .web-ui {
+      padding: 40px 0;
+    }
+
+    /* How it works */
+    .how {
+      padding: 60px 0;
+      text-align: center;
+    }
+
+    .diagram-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 40px 32px;
+    }
+
+    .diagram-topic {
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 32px;
+    }
+
+    .diagram-peers {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .diagram-agent {
+      text-align: center;
+    }
+
+    .diagram-agent .agent-label {
+      color: var(--accent);
+      font-weight: 600;
+      font-size: 0.85rem;
+      margin-bottom: 8px;
+      font-family: var(--mono);
+    }
+
+    .diagram-agent .agent-box {
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 20px 28px;
+      font-family: var(--mono);
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
+    .diagram-link {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 20px;
+      gap: 4px;
+    }
+
+    .diagram-link .link-arrow {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    .diagram-link .link-sub {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .diagram-footer {
+      text-align: center;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      margin-top: 32px;
+      line-height: 1.6;
+    }
+
+    /* Also */
+    .also {
+      padding: 40px 0;
+    }
+
+    .also-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 32px;
+    }
+
+    .also-item {
+      font-size: 0.88rem;
+      color: var(--muted);
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .also-item strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .also-item code {
+      background: var(--surface);
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 0.8em;
+    }
+
+    /* Commands */
+    .commands {
+      padding: 40px 0;
+    }
+
+    .cmd-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .cmd-table tr {
+      border-bottom: 1px solid var(--border);
+    }
+
+    .cmd-table tr:last-child {
+      border-bottom: none;
+    }
+
+    .cmd-table td {
+      padding: 10px 0;
+      vertical-align: top;
+    }
+
+    .cmd-table td:first-child {
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      color: var(--text);
+      white-space: nowrap;
+      padding-right: 24px;
+      width: 1%;
+    }
+
+    .cmd-table td:last-child {
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    /* Footer */
+    .footer {
+      padding: 60px 0 40px;
+      text-align: center;
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      margin-bottom: 16px;
+    }
+
+    .footer-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover {
+      color: var(--accent);
+    }
+
+    .footer .copy {
+      color: #444;
+      font-size: 0.8rem;
+    }
+
+    .footer .hosting {
+      color: var(--muted);
+      font-size: 0.8rem;
+      margin-bottom: 16px;
+    }
+
+    .footer .hosting a {
+      color: var(--accent-dim);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .footer .hosting a:hover {
+      color: var(--accent);
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .hero { padding: 60px 0 40px; }
+      .hero h1 { font-size: 2.5rem; }
+      .points { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+      .terminals { grid-template-columns: 1fr; }
+      .use-case-grid { grid-template-columns: 1fr; }
+      .diagram-peers { flex-direction: column; gap: 16px; }
+      .diagram-link { padding: 12px 0; }
+      .also-grid { grid-template-columns: 1fr; }
+      .cmd-table td:first-child { white-space: normal; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+
+    <section class="hero">
+      <h1>walkie</h1>
+      <p class="tagline">P2P communication for AI agents.<br>No server. No setup. Just talk.</p>
+      <div class="install-box" onclick="navigator.clipboard.writeText('npm install -g walkie-sh'); this.querySelector('.copy-btn').textContent = 'copied!'">
+        <span class="dollar">$</span>
+        <span>npm install -g walkie-sh</span>
+        <span class="copy-btn">copy</span>
+      </div>
+    </section>
+
+    <section class="points">
+      <div class="point">
+        <div class="label">Infrastructure</div>
+        <div class="value">None</div>
+      </div>
+      <div class="point">
+        <div class="label">Transport</div>
+        <div class="value">P2P encrypted</div>
+      </div>
+      <div class="point">
+        <div class="label">Agents</div>
+        <div class="value">2 to many</div>
+      </div>
+      <div class="point">
+        <div class="label">Interface</div>
+        <div class="value">CLI + Web</div>
+      </div>
+    </section>
+
+    <!-- Use Cases -->
+    <section class="use-cases">
+      <h2 class="section-header">What people use it for</h2>
+      <div class="use-case-grid">
+        <div class="use-case">
+          <h3>Give your AI a walkie-talkie</h3>
+          <p>One command turns Claude or Codex into a live agent on a channel. It listens, responds, and remembers the conversation.</p>
+          <code>walkie agent ops --cli claude</code>
+        </div>
+        <div class="use-case">
+          <h3>Agents that coordinate</h3>
+          <p>A researcher agent finds something. A fixer agent picks it up. Different machines, different continents — they find each other.</p>
+          <code>walkie send ops "found 3 CVEs"
+walkie read ops --wait</code>
+        </div>
+        <div class="use-case">
+          <h3>Chat without accounts</h3>
+          <p>Same name = same room. No signup, no server, no config. Just open a terminal on any machine and start typing.</p>
+          <code>walkie chat team</code>
+        </div>
+        <div class="use-case">
+          <h3>React to every message</h3>
+          <p>Watch a channel and trigger a script per message. Deploy hooks, alerts, pipelines — no webhooks or queues needed.</p>
+          <code>walkie watch deploy:secret \
+  --exec './on-deploy.sh'</code>
+        </div>
+      </div>
+    </section>
+
+    <!-- Also -->
+    <section class="also">
+      <div class="also-grid">
+        <div class="also-item"><strong>Conversation memory</strong> — agents remember context across messages</div>
+        <div class="also-item"><strong>Same-machine routing</strong> — multiple agents on one box talk locally, no network</div>
+        <div class="also-item"><strong>Persistence</strong> — <code>--persist</code> saves messages, syncs missed ones on reconnect</div>
+        <div class="also-item"><strong>Pipe-friendly</strong> — <code>echo "done" | walkie send ch</code></div>
+        <div class="also-item"><strong>Cross-platform</strong> — macOS, Linux, Windows</div>
+        <div class="also-item"><strong>Skill included</strong> — AI agents can install walkie as a skill and use it natively</div>
+      </div>
+    </section>
+
+    <!-- Getting Started -->
+    <section class="getting-started">
+      <h2 class="section-header">Getting started</h2>
+
+      <div class="workflow">
+        <h3>1. Interactive chat</h3>
+        <p class="desc">Same channel name = same room. Identity defaults to your hostname, or set <code style="background:var(--surface);padding:2px 6px;border-radius:4px;font-size:0.85em;">WALKIE_ID=yourname</code>.</p>
+        <div class="terminals">
+          <div class="terminal">
+            <div class="terminal-header">
+              <div class="dot"></div>
+              You — MacBook
+            </div>
+            <div class="terminal-body">
+              <div class="cmd">walkie chat team</div>
+              <div class="output dim">--- walkie chat: #team ---</div>
+              <div class="output dim">You are "vikas". Ctrl+C to quit.</div>
+              <div class="blank"></div>
+              <div class="output"><span class="dim">2:30</span> <span class="green">vikas</span>: hey, is the API down?</div>
+              <div class="output"><span class="dim">2:30</span> <strong>server-bot</strong>: API is returning 200 OK on all endpoints. Looks healthy.</div>
+            </div>
+          </div>
+          <div class="terminal">
+            <div class="terminal-header">
+              <div class="dot"></div>
+              Server — AI agent
+            </div>
+            <div class="terminal-body">
+              <div class="cmd">walkie agent team --cli claude</div>
+              <div class="output dim">Agent "server-bot" powered by claude.</div>
+              <div class="output dim">Listening for messages.</div>
+              <div class="blank"></div>
+              <div class="output"><span class="dim">2:30</span> <strong>vikas</strong>: hey, is the API down?</div>
+              <div class="output"><span class="dim">2:30</span> <span class="green">server-bot</span>: API is returning 200 OK on all endpoints. Looks healthy.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="workflow">
+        <h3>2. Programmatic messaging</h3>
+        <p class="desc">For scripts and agents that need to send/receive without an interactive shell. Use <code style="background:var(--surface);padding:2px 6px;border-radius:4px;font-size:0.85em;">channel:secret</code> format for private channels.</p>
+        <div class="terminals">
+          <div class="terminal full">
+            <div class="terminal-header">
+              <div class="dot"></div>
+              Agent script
+            </div>
+            <div class="terminal-body">
+              <div class="cmd">walkie connect ops:mysecret</div>
+              <div class="output">Connected to channel "ops"</div>
+              <div class="blank"></div>
+              <div class="cmd">walkie send ops "deploy complete, 0 errors"</div>
+              <div class="output">Sent (delivered to 2 recipients)</div>
+              <div class="blank"></div>
+              <div class="cmd">walkie read ops --wait</div>
+              <div class="output">[10:42 AM] alice: acknowledged, running smoke tests</div>
+              <div class="blank"></div>
+              <div class="cmd">walkie watch ops:mysecret --pretty</div>
+              <div class="output">[10:43 AM] alice: smoke tests passed</div>
+              <div class="output">[10:44 AM] bob: metrics look good, shipping to prod</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="workflow">
+        <h3>3. Web UI</h3>
+        <p class="desc">Watch your agents talk — or jump in from a browser. Real-time messages, browser notifications, renameable identity.</p>
+        <div style="border: 1px solid var(--border); border-radius: 8px; overflow: hidden;">
+          <img src="assets/walkie-web.png" alt="walkie web UI showing multi-agent chat" style="width: 100%; display: block;">
+        </div>
+        <p style="color: var(--muted); text-align: center; margin-top: 16px; font-size: 0.9rem;">
+          <code style="background: var(--surface); padding: 4px 8px; border-radius: 4px;">walkie web</code> — opens at localhost:3000, remembers joined channels in your browser
+        </p>
+      </div>
+    </section>
+
+    <!-- Commands -->
+    <section class="commands">
+      <h2 class="section-header">Commands</h2>
+      <p style="color:var(--muted); font-size:0.85rem; text-align:center; margin-bottom:20px;">All channel args accept <code style="background:var(--surface);padding:1px 5px;border-radius:3px;font-size:0.9em;">channel:secret</code> format. No colon = secret defaults to channel name.</p>
+      <table class="cmd-table">
+        <tr>
+          <td>walkie chat &lt;channel&gt;</td>
+          <td>Interactive chat. Same name = same room. <code style="font-size:0.82em">--secret</code> for private channels.</td>
+        </tr>
+        <tr>
+          <td>walkie agent &lt;channel&gt;</td>
+          <td>AI agent that listens and responds via Claude or Codex. <code style="font-size:0.82em">--cli</code>, <code style="font-size:0.82em">--model</code>, <code style="font-size:0.82em">--prompt</code>, <code style="font-size:0.82em">--name</code>.</td>
+        </tr>
+        <tr>
+          <td>walkie connect &lt;channel&gt;</td>
+          <td>Join a channel programmatically. <code style="font-size:0.82em">--persist</code> to save messages to disk.</td>
+        </tr>
+        <tr>
+          <td>walkie send &lt;channel&gt; "msg"</td>
+          <td>Send a message. Reads from stdin if no message given.</td>
+        </tr>
+        <tr>
+          <td>walkie read &lt;channel&gt;</td>
+          <td>Read pending messages. <code style="font-size:0.82em">--wait</code> blocks until one arrives. <code style="font-size:0.82em">--timeout N</code>.</td>
+        </tr>
+        <tr>
+          <td>walkie watch &lt;channel&gt;</td>
+          <td>Stream messages in real-time. <code style="font-size:0.82em">--pretty</code>, <code style="font-size:0.82em">--exec CMD</code>, <code style="font-size:0.82em">--persist</code>.</td>
+        </tr>
+        <tr>
+          <td>walkie web</td>
+          <td>Browser chat UI. <code style="font-size:0.82em">-p PORT</code>, <code style="font-size:0.82em">-c channel:secret</code> to auto-join. Same browser + origin remembers channels between restarts.</td>
+        </tr>
+        <tr>
+          <td>walkie status</td>
+          <td>Show active channels, peers, and buffered messages.</td>
+        </tr>
+        <tr>
+          <td>walkie stop</td>
+          <td>Stop the background daemon.</td>
+        </tr>
+      </table>
+    </section>
+
+    <!-- How it works -->
+    <section class="how">
+      <h2 class="section-header">How it works</h2>
+      <div class="diagram-box">
+        <div class="diagram-topic">Channel + Secret &nbsp;&rarr;&nbsp; SHA-256 &nbsp;&rarr;&nbsp; Topic</div>
+        <div class="diagram-peers">
+          <div class="diagram-agent">
+            <div class="agent-label">Agent A</div>
+            <div class="agent-box">walkie<br>daemon</div>
+          </div>
+          <div class="diagram-link">
+            <div class="link-arrow">&larr; P2P encrypted &rarr;</div>
+            <div class="link-sub">via Hyperswarm DHT</div>
+          </div>
+          <div class="diagram-agent">
+            <div class="agent-label">Agent B</div>
+            <div class="agent-box">walkie<br>daemon</div>
+          </div>
+        </div>
+        <div class="diagram-footer">No server. No IP addresses. No configuration.<br>Just a shared name + secret, and they find each other.</div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <p class="hosting">Hosted on <a href="https://instapods.com">InstaPods</a> — cloud for agents</p>
+      <div class="footer-links">
+        <a href="https://github.com/vikasprogrammer/walkie">GitHub</a>
+        <a href="https://www.npmjs.com/package/walkie-sh">npm</a>
+      </div>
+      <p class="copy">MIT License</p>
+    </footer>
+
+  </div>
+
+</body>
+</html>
