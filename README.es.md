@@ -104,11 +104,13 @@ termux-fix-shebang /data/data/com.termux/files/home/.npm-global/bin/walkie
 
 *   🏆 **Integración y Orquestación:** [kuromi04](https://github.com/kuromi04) (Ajustes de UI responsiva, corrección de loopback y pruebas en Termux).
 *   🛰️ **Creador del Motor Original:** Todo el crédito al autor original de `walkie` / `walkie-sh` por desarrollar el núcleo de comunicación P2P seguro.
-*   💫 **Agradecimiento Especial a @Ivam3:** Un agradecimiento muy especial a mi amigo [@Ivam3](https://github.com/ivam3) y a su comunidad **Ivam3bycinderella** por su constante apoyo y por el excelente ecosistema de herramientas de **i-HakLab**.
+*   💫 **Agradecimiento Especial a @Ivam3 y la Comunidad i-HakLab:** Un agradecimiento profundo a mi amigo [@Ivam3](https://github.com/ivam3), quien es el cerebro detrás del funcionamiento y la adaptación del entorno. Su repositorio personalizado [termux-packages](https://github.com/ivam3/termux-packages) provee los paquetes vitales que hacen posible toda esta orquestación gráfica, web y de scripts dentro de Android. Un agradecimiento especial también a su comunidad **Ivam3bycinderella** por su constante apoyo.
     *   🖥️ [GitHub - Ivam3](https://github.com/ivam3)
+    *   📦 [Repositorio termux-packages](https://github.com/ivam3/termux-packages)
     *   📺 [YouTube - Ivam3bycinderella](https://youtube.com/@Ivam3bycinderella)
     *   💬 [Grupo de Soporte en Telegram](https://t.me/Ivam3by_Cinderella)
     *   🤖 [Bot de Telegram (@Ivam3_bot)](https://t.me/ivam3_bot)
+*   🔮 **La Base de Conocimiento termux-oracle:** Reconocimiento especial a la guía y documentación del skill `termux-oracle` por proveer las directrices esenciales para la resolución de errores en wrappers y los estándares de Node en Android.
 
 ---
 
