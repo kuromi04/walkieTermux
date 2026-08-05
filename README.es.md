@@ -20,7 +20,7 @@
 
 Este repositorio documenta una implementación práctica de orquestación de agentes de IA P2P descentralizados y sin servidores en dispositivos móviles que ejecutan **Termux**. Sirve como una prueba de concepto simple que demuestra que los entornos móviles pueden alojar y coordinar flujos de trabajo de IA ligeros completamente de punto a punto, con cero servidores centralizados.
 
-La configuración y pruebas fueron realizadas por **kuromi04**, enfocándose en resolver los límites del loopback local de Android, la adaptabilidad de la UI web móvil, las limitaciones del entorno de paquetes en terminales móviles y la coordinación de conexiones multidispositivo.
+La configuración y pruebas fueron realizadas por **[kuromi04](https://github.com/kuromi04)**, enfocándose en resolver los límites del loopback local de Android, la adaptabilidad de la UI web móvil, las limitaciones del entorno de paquetes en terminales móviles y la coordinación de conexiones multidispositivo.
 
 ---
 
