@@ -1,117 +1,116 @@
 # 🛰️ Walkie-Termux: P2P AI Agent Orchestration
 
-![Walkie-Termux Banner](./banner.jpg)
-
-> 🚀 **Milestone Achievement:** This project marks the successful realization of P2P AI Agent communication running natively inside **Termux** across multiple Android devices with **zero external servers or setup**. 
-
-Designed, tested, and verified by developer **kuromi04**, this repository documents the exact process of orchestrating mobile terminals, handling network restrictions, and connecting local AI agents securely using P2P DHT overlays.
-
----
-
-## 🏆 El Hito de kuromi04 (¿Qué se hizo?)
-
-El desarrollador **kuromi04** logró conectar con éxito agentes de inteligencia artificial y usuarios de terminales dentro del ecosistema de **Termux** en Android de manera P2P. Durante el desarrollo de este proyecto, se resolvieron y documentaron importantes desafíos técnicos de entornos móviles:
-
-1. **Resolución del Bug de NPM en i-HakLab:**
-   El wrapper global de npm en `~/.local/bin/npm` presentaba un bucle vacío infinito al ejecutar instalaciones sin parámetros adicionales. Se resolvió puenteando el wrapper y ejecutando directamente el binario nativo de npm:
-   ```bash
-   /data/data/com.termux/files/usr/bin/npm install
-   ```
-2. **Corrección de Shebangs de Android:**
-   Se aplicó la corrección del shebang de Node.js para que el binario global de `walkie` se ejecute correctamente bajo el entorno aislado de Termux sin dar errores de intérprete:
-   ```bash
-   termux-fix-shebang $(which walkie)
-   ```
-3. **Diseño de Interfaz Web Responsiva:**
-   Se rediseñó la interfaz web original (`src/web-ui.js`) para soportar pantallas móviles táctiles, incorporando media queries, barras laterales autocolapsables y un botón de retroceso `←` adaptado para celulares.
-4. **Puenteo de Bloqueos de Loopback en Android Chrome:**
-   Se identificaron y documentaron los bloqueos de seguridad del sandbox de Android Chrome en la conexión de WebSockets locales, proponiendo el uso de direcciones numéricas directas como `http://127.0.0.1:3000` o la IP de red local para lograr una interactividad del 100%.
-
----
-
-## 📸 Demostración Visual (Paso Clave)
-
-A continuación se muestra la interfaz responsiva de Walkie ejecutándose directamente en `localhost:3000` sobre el navegador de Android, lista para unir canales P2P de forma inalámbrica:
+<p align="center">
+  <img src="./banner.jpg" alt="Walkie-Termux Banner" width="100%">
+</p>
 
 <p align="center">
-  <img src="./screenshot.jpg" width="350" alt="Walkie Localhost Screenshot">
+  <a href="https://github.com/termux/termux-app"><img src="https://img.shields.io/badge/Termux-Environment-black?style=for-the-badge&logo=termux&logoColor=22c55e" alt="Termux"></a>
+  <a href="https://nodejs.org"><img src="https://img.shields.io/badge/Node.js-v18+-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js"></a>
+  <a href="https://github.com/kuromi04/walkie-sh-termux"><img src="https://img.shields.io/badge/P2P-Decentralized-blueviolet?style=for-the-badge" alt="P2P"></a>
 </p>
 
 ---
 
-## 🛠️ Guía de Instalación Paso a Paso en Termux
+🌐 **[Leer este archivo en Español :spain:](./README.es.md)**
 
-Sigue estos pasos detallados para instalar y ejecutar esta versión de `walkie` optimizada para Termux:
+---
 
-### Paso 1: Instalar dependencias en Termux
-Actualiza los repositorios e instala Node.js y Git:
+## 💡 About this Project
+
+This repository documents a practical implementation of serverless, decentralized P2P AI agent orchestration on mobile devices running **Termux**. It serves as a simple proof of concept showing that mobile environments can host and coordinate light AI workflows entirely peer-to-peer with zero centralized servers.
+
+This setup and testing were carried out by **kuromi04**, focusing on resolving local loopback boundaries, mobile web UI responsiveness, package environment constraints in Android terminals, and coordinating multi-device connections.
+
+---
+
+## 🛠️ Orchestration Notes (How it was solved)
+
+During deployment in Termux, several platform-specific challenges were addressed:
+
+1. **i-HakLab NPM Wrapper Resolution:**
+   The global `npm` wrapper inside the `i-HakLab` suite would loop endlessly on empty arguments. To install the dependencies, we bypassed the wrapper script by executing the raw Termux prefix npm binary directly:
+   ```bash
+   /data/data/com.termux/files/usr/bin/npm install
+   ```
+2. **Android Node Shebang Correction:**
+   Standard shebang paths cause execution failures in Termux due to Android's directory structure. We corrected the global CLI executable using the Termux utility:
+   ```bash
+   termux-fix-shebang $(which walkie)
+   ```
+3. **Mobile Responsive Web UI:**
+   Adjusted the interface layout (`src/web-ui.js`) to support portrait displays and touch interfaces by implementing auto-collapsing sidebars and a mobile navigation back button (`←`).
+4. **Android Chrome Loopback WebSocket Connection:**
+   Mobile browsers enforce strict sandbox limits on loopback connections. We verified that using explicit numeric IP configurations (`127.0.0.1:3000` or local LAN IP) successfully bypasses these limitations.
+
+---
+
+## 📸 Proof of Concept
+
+Here is a preview of the responsive web dashboard running on `localhost:3000` inside Android Chrome, waiting to sync connections:
+
+<p align="center">
+  <img src="./screenshot.jpg" width="320" alt="Walkie Localhost Screenshot">
+</p>
+
+---
+
+## 🚀 Setup Steps in Termux
+
+### 1. Install prerequisites in Termux:
 ```bash
 pkg update && pkg upgrade -y
 pkg install nodejs git -y
 ```
 
-### Paso 2: Clonar este repositorio
-Clona el repositorio en tu espacio local:
+### 2. Clone this repository:
 ```bash
 git clone https://github.com/kuromi04/walkie-sh-termux.git
 cd walkie-sh-termux
 ```
 
-### Paso 3: Instalación de dependencias (Bypasseando wrappers)
-Instala las dependencias del proyecto usando directamente el instalador nativo de Termux para evitar el bucle infinito del wrapper de i-HakLab:
+### 3. Install dependencies (Bypassing wrapper):
 ```bash
 /data/data/com.termux/files/usr/bin/npm install
 ```
 
-### Paso 4: Instalar walkie de forma global
-Enlaza el comando globalmente en tu terminal:
+### 4. Link global binary:
 ```bash
 npm install -g .
-```
-
-### Paso 5: Corregir el Shebang de ejecución
-Corrige el shebang del ejecutable para enlazar el binario nativo de Node en Termux:
-```bash
 termux-fix-shebang /data/data/com.termux/files/home/.npm-global/bin/walkie
 ```
 
 ---
 
-## 🚀 Cómo Usar walkie-sh-termux
+## 🛰️ How to run
 
-### 1. Iniciar un Chat P2P entre Dispositivos
-En el dispositivo 1 (Termux):
-```bash
-walkie chat mi-canal-seguro
-```
-En el dispositivo 2 (Termux):
-```bash
-walkie chat mi-canal-seguro
-```
-*La conexión se establecerá de forma cifrada de punto a punto de inmediato.*
-
-### 2. Levantar un Agente de Inteligencia Artificial (Codex/Claude)
-Puedes hacer que un dispositivo escuche como un Agente de IA:
-```bash
-walkie agent mi-canal-seguro --cli codex --name "AsistenteTermux" --prompt "Eres un agente experto en Termux."
-```
-
-### 3. Levantar la Interfaz Web Móvil
-Ejecuta el servidor web local:
-```bash
-walkie web
-```
-Abre tu navegador en:
-`http://127.0.0.1:3000` o en una pestaña de incógnito para evitar la caché vieja.
+*   **P2P Terminal Chat:**
+    ```bash
+    walkie chat my-channel-name
+    ```
+*   **AI Agent listener:**
+    ```bash
+    walkie agent my-channel-name --cli codex --name "Assistant" --prompt "You are a helpful Termux assistant."
+    ```
+*   **Web Dashboard:**
+    ```bash
+    walkie web
+    ```
+    *Access via `http://127.0.0.1:3000/?v=4` on your mobile browser (incognito/private mode recommended to clear old cache).*
 
 ---
 
-## 🤝 Créditos y Agradecimientos
+## 🤝 Acknowledgements & Credits
 
-*   🏆 **Líder de Desarrollo e Integración:** [kuromi04](https://github.com/kuromi04) por documentar el despliegue del hito en dispositivos móviles, solucionar las fallas de red de loopback de Android y la interfaz responsiva.
-*   🛰️ **Creador del Proyecto Original:** Muchas gracias al autor original de `walkie` / `walkie-sh` por diseñar el excelente motor P2P en el que se basa este trabajo.
+*   🏆 **Integration & Orchestration:** [kuromi04](https://github.com/kuromi04) (Mobile responsive UI adjustments, loopback fixes, and Termux testing).
+*   🛰️ **Original Engine Creator:** Full credit to the original creator of `walkie` / `walkie-sh` for developing the secure P2P communication core.
+*   💫 **Special Thanks to @Ivam3:** Deep gratitude to my friend [@Ivam3](https://github.com/ivam3) and his **Ivam3bycinderella** community for their continuous support and the fantastic **i-HakLab** ecosystem.
+    *   🖥️ [GitHub - Ivam3](https://github.com/ivam3)
+    *   📺 [YouTube - Ivam3bycinderella](https://youtube.com/@Ivam3bycinderella)
+    *   💬 [Telegram Support Group](https://t.me/Ivam3by_Cinderella)
+    *   🤖 [Telegram Bot (@Ivam3_bot)](https://t.me/ivam3_bot)
 
 ---
 
-## ⚖️ Licencia
-Este proyecto está bajo la Licencia MIT.
+## ⚖️ License
+MIT License.
