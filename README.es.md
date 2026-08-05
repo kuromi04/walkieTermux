@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://github.com/termux/termux-app"><img src="https://img.shields.io/badge/Termux-Entorno-black?style=for-the-badge&logo=termux&logoColor=22c55e" alt="Termux"></a>
   <a href="https://nodejs.org"><img src="https://img.shields.io/badge/Node.js-v18+-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js"></a>
-  <a href="https://github.com/kuromi04/walkie-sh-termux"><img src="https://img.shields.io/badge/P2P-Descentralizado-blueviolet?style=for-the-badge" alt="P2P"></a>
+  <a href="https://github.com/kuromi04/termux-ai-swarm"><img src="https://img.shields.io/badge/P2P-Descentralizado-blueviolet?style=for-the-badge" alt="P2P"></a>
 </p>
 
 ---
@@ -65,8 +65,8 @@ pkg install nodejs git -y
 
 ### 2. Clonar este repositorio:
 ```bash
-git clone https://github.com/kuromi04/walkie-sh-termux.git
-cd walkie-sh-termux
+git clone https://github.com/kuromi04/termux-ai-swarm.git
+cd termux-ai-swarm
 ```
 
 ### 3. Instalar dependencias (Evitando el wrapper):
