@@ -37,6 +37,8 @@ Durante el despliegue en Termux, se abordaron varios desafíos específicos de l
    Ajustamos el diseño de la interfaz (`src/web-ui.js`) para soportar pantallas verticales y pantallas táctiles, implementando barras laterales colapsables automáticamente y un botón de retroceso móvil (`←`).
 3. **Conexiones WebSocket en Chrome para Android:**
    Los navegadores móviles aplican estrictos límites de seguridad en las conexiones de loopback. Verificamos que al usar direcciones IP numéricas explícitas (`127.0.0.1:3000` o la IP local de la red) se evitan con éxito estas restricciones.
+4. **Puente de Compatibilidad Glibc (Bypass para JCode y otras IA):**
+   Al invocar IAs basadas en glibc (como `jcode`) desde Node.js en Termux, el proceso falla debido a conflictos de enlace de librerías (ya que Node.js hereda el entorno dinámico basado en Bionic de Termux). Lo solucionamos implementando un puente de entorno limpio en el spawn de `walkie`, eliminando las variables de Termux (`LD_PRELOAD`, `LD_LIBRARY_PATH`) e inyectando `GLIBC_TUNABLES="glibc.rtld.dynamic_sort=1"` para garantizar la ejecución.
 
 ---
 

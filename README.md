@@ -37,6 +37,8 @@ During deployment in Termux, several platform-specific challenges were addressed
    Adjusted the interface layout (`src/web-ui.js`) to support portrait displays and touch interfaces by implementing auto-collapsing sidebars and a mobile navigation back button (`←`).
 3. **Android Chrome Loopback WebSocket Connection:**
    Mobile browsers enforce strict sandbox limits on loopback connections. We verified that using explicit numeric IP configurations (`127.0.0.1:3000` or local LAN IP) successfully bypasses these limitations.
+4. **Glibc Compatibility Bridge (Bypass for JCode & other AIs):**
+   When invoking glibc-based AIs like `jcode` from Node.js in Termux, the execution will crash due to linker/library mismatches (since Node.js inherits Termux's Bionic-linked dynamic environment). We solved this by implementing a clean-environment bridge in `walkie`'s spawn options, stripping Termux-native wrapper variables (`LD_PRELOAD`, `LD_LIBRARY_PATH`) and injecting `GLIBC_TUNABLES="glibc.rtld.dynamic_sort=1"` to ensure compatibility.
 
 ---
 

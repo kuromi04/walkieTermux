@@ -147,12 +147,51 @@ program
 
 function detectCli() {
   const { spawnSync } = require('child_process')
-  for (const cmd of ['claude', 'codex']) {
+  for (const cmd of ['jcode', 'claude', 'codex']) {
     const r = spawnSync('which', [cmd], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
     if (r.status === 0) return cmd
   }
   return null
 }
+
+function runJcode(prompt, sessionId, model, extraArgs) {
+  const { spawnSync } = require('child_process')
+  const args = ['--quiet', 'run', '--json']
+  if (sessionId) args.push('--resume', sessionId)
+  if (model) args.push('--model', model)
+  if (extraArgs) args.push(...extraArgs)
+  args.push(prompt)
+
+  // CLEAN ENV BYPASS BRIDGE FOR TERMUX GLIBC COMPATIBILITY
+  const env = { ...process.env }
+  delete env.LD_PRELOAD
+  delete env.LD_LIBRARY_PATH
+  env.GLIBC_TUNABLES = "glibc.rtld.dynamic_sort=1"
+
+  const result = spawnSync('jcode', args, {
+    env,
+    timeout: 300000,
+    maxBuffer: 10 * 1024 * 1024,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe']
+  })
+
+  if (result.error) throw result.error
+  if (result.status !== 0) throw new Error(result.stderr || 'jcode exited with code ' + result.status)
+
+  const stdout = (result.stdout || '').trim()
+  const out = { text: stdout, sessionId: null }
+  const lines = stdout.split('\n').filter(l => l.trim())
+  for (let i = lines.length - 1; i >= 0; i--) {
+    try {
+      const obj = JSON.parse(lines[i])
+      if (obj.session_id) out.sessionId = obj.session_id
+      if (obj.result !== undefined) { out.text = obj.result; break }
+    } catch {}
+  }
+  return out
+}
+
 
 function runClaude(prompt, sessionId, model, extraArgs) {
   const { spawnSync } = require('child_process')
@@ -248,21 +287,21 @@ function runCodex(prompt, sessionId, model, extraArgs) {
 
 program
   .command('agent <channel>')
-  .description('AI agent that listens and responds via claude or codex')
+  .description('AI agent that listens and responds via jcode, claude or codex')
   .option('--secret <secret>', 'Custom secret (default: channel name)')
-  .option('--cli <cli>', 'CLI to use: claude or codex (auto-detected if omitted)')
+  .option('--cli <cli>', 'CLI to use: jcode, claude or codex (auto-detected if omitted)')
   .option('--prompt <text>', 'System prompt for the agent')
   .option('--model <model>', 'Model to use')
   .option('--name <name>', 'Agent display name')
-  .option('--agent-args <args>', 'Extra CLI arguments passed to claude/codex (e.g. "--dangerously-skip-permissions")')
+  .option('--agent-args <args>', 'Extra CLI arguments passed to jcode/claude/codex (e.g. "--dangerously-skip-permissions")')
   .action(async (channelArg, opts) => {
     const cli = opts.cli || detectCli()
     if (!cli) {
-      console.error('Error: neither "claude" nor "codex" CLI found. Install one first.')
+      console.error('Error: neither "jcode", "claude" nor "codex" CLI found. Install one first.')
       process.exit(1)
     }
-    if (cli !== 'claude' && cli !== 'codex') {
-      console.error(`Error: unsupported CLI "${cli}". Use "claude" or "codex".`)
+    if (cli !== 'jcode' && cli !== 'claude' && cli !== 'codex') {
+      console.error(`Error: unsupported CLI "${cli}". Use "jcode", "claude" or "codex".`)
       process.exit(1)
     }
 
@@ -272,7 +311,7 @@ program
     const secret = opts.secret || parsed.secret
     const cid = agentName
     const extraArgs = opts.agentArgs ? opts.agentArgs.split(/\s+/) : null
-    const askFn = cli === 'claude' ? runClaude : runCodex
+    const askFn = cli === 'jcode' ? runJcode : (cli === 'claude' ? runClaude : runCodex)
 
     try {
       const resp = await request({ action: 'join', channel, secret, clientId: cid })
@@ -380,10 +419,10 @@ program
   .description('Start two AI agents collaborating on a channel (brain + executor)')
   .option('--secret <secret>', 'Channel secret')
   .option('--task <text>', 'Initial task to kick things off')
-  .option('--brain <cli>', 'CLI for brain (default: codex if available, else claude)')
-  .option('--exec-cli <cli>', 'CLI for executor (default: claude if available, else codex)')
+  .option('--brain <cli>', 'CLI for brain (default: jcode if available, else codex if available, else claude)')
+  .option('--exec-cli <cli>', 'CLI for executor (default: jcode if available, else claude if available, else codex)')
   .option('--model <model>', 'Model for both agents')
-  .option('--agent-args <args>', 'Extra CLI arguments passed to claude/codex (e.g. "--dangerously-skip-permissions")')
+  .option('--agent-args <args>', 'Extra CLI arguments passed to jcode/claude/codex (e.g. "--dangerously-skip-permissions")')
   .action(async (channelArg, opts) => {
     const { spawn } = require('child_process')
     const readline = require('readline')
@@ -394,20 +433,23 @@ program
     // Detect available CLIs
     const available = []
     const { spawnSync } = require('child_process')
-    for (const cmd of ['codex', 'claude']) {
+    for (const cmd of ['jcode', 'codex', 'claude']) {
       const r = spawnSync('which', [cmd], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
       if (r.status === 0) available.push(cmd)
     }
     if (available.length === 0) {
-      console.error('Error: neither "claude" nor "codex" CLI found.')
+      console.error('Error: none of "jcode", "claude" or "codex" CLI found.')
       process.exit(1)
     }
 
-    // Assign CLIs — prefer codex for brain, claude for executor
+    // Assign CLIs — prefer jcode/codex for brain, jcode/claude for executor
     let brainCli = opts.brain
     let execCli = opts.execCli
     if (!brainCli && !execCli) {
-      if (available.includes('codex') && available.includes('claude')) {
+      if (available.includes('jcode')) {
+        brainCli = 'jcode'
+        execCli = available.includes('claude') ? 'claude' : 'jcode'
+      } else if (available.includes('codex') && available.includes('claude')) {
         brainCli = 'codex'
         execCli = 'claude'
       } else {
