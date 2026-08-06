@@ -28,19 +28,14 @@ La configuración y pruebas fueron realizadas por **[kuromi04](https://github.co
 
 Durante el despliegue en Termux, se abordaron varios desafíos específicos de la plataforma:
 
-1. **Resolución del Wrapper de NPM en i-HakLab:**
-   El script wrapper global de `npm` dentro de la suite `i-HakLab` entraba en un bucle infinito en instalaciones sin argumentos. Para instalar las dependencias, puenteamos este script ejecutando directamente el binario nativo de npm en el prefijo de Termux:
-   ```bash
-   /data/data/com.termux/files/usr/bin/npm install
-   ```
-2. **Corrección de Shebang en Android Node:**
+1. **Corrección de Shebang en Android Node:**
    Las rutas estándar de shebang fallan en Termux debido a la estructura de directorios de Android. Corregimos el ejecutable global utilizando la herramienta de Termux:
    ```bash
    termux-fix-shebang $(which walkie)
    ```
-3. **UI Web Responsiva para Móviles:**
+2. **UI Web Responsiva para Móviles:**
    Ajustamos el diseño de la interfaz (`src/web-ui.js`) para soportar pantallas verticales y pantallas táctiles, implementando barras laterales colapsables automáticamente y un botón de retroceso móvil (`←`).
-4. **Conexiones WebSocket en Chrome para Android:**
+3. **Conexiones WebSocket en Chrome para Android:**
    Los navegadores móviles aplican estrictos límites de seguridad en las conexiones de loopback. Verificamos que al usar direcciones IP numéricas explícitas (`127.0.0.1:3000` o la IP local de la red) se evitan con éxito estas restricciones.
 
 ---
@@ -69,9 +64,9 @@ git clone https://github.com/kuromi04/walkieTermux.git
 cd walkieTermux
 ```
 
-### 3. Instalar dependencias (Evitando el wrapper):
+### 3. Instalar dependencias:
 ```bash
-/data/data/com.termux/files/usr/bin/npm install
+npm install
 ```
 
 ### 4. Enlazar binario global:
@@ -104,13 +99,13 @@ termux-fix-shebang /data/data/com.termux/files/home/.npm-global/bin/walkie
 
 *   🏆 **Integración y Orquestación:** [kuromi04](https://github.com/kuromi04) (Ajustes de UI responsiva, corrección de loopback y pruebas en Termux).
 *   🛰️ **Creador del Motor Original:** Todo el crédito al autor original de `walkie` / `walkie-sh` por desarrollar el núcleo de comunicación P2P seguro.
-*   💫 **Agradecimiento Especial a @Ivam3 y la Comunidad i-HakLab:** Un agradecimiento profundo a mi amigo [@Ivam3](https://github.com/ivam3), quien es el cerebro detrás del funcionamiento y la adaptación del entorno. Su repositorio personalizado [termux-packages](https://github.com/ivam3/termux-packages) provee los paquetes vitales que hacen posible toda esta orquestación gráfica, web y de scripts dentro de Android. Un agradecimiento especial también a su comunidad **Ivam3bycinderella** por su constante apoyo.
+*   💫 **Agradecimiento Especial a @Ivam3 y la Comunidad:** Un agradecimiento profundo a mi amigo [@Ivam3](https://github.com/ivam3), quien es el cerebro detrás del funcionamiento y la adaptación del entorno. Su repositorio personalizado [termux-packages](https://github.com/ivam3/termux-packages) provee los paquetes vitales que hacen posible toda esta orquestación gráfica, web y de scripts dentro de Android. Un agradecimiento especial también a su comunidad **Ivam3bycinderella** por su constante apoyo.
     *   🖥️ [GitHub - Ivam3](https://github.com/ivam3)
     *   📦 [Repositorio termux-packages](https://github.com/ivam3/termux-packages)
     *   📺 [YouTube - Ivam3bycinderella](https://youtube.com/@Ivam3bycinderella)
     *   💬 [Grupo de Soporte en Telegram](https://t.me/Ivam3by_Cinderella)
     *   🤖 [Bot de Telegram (@Ivam3_bot)](https://t.me/ivam3_bot)
-*   🔮 **La Base de Conocimiento termux-oracle:** Reconocimiento especial a la guía y documentación del skill `termux-oracle` por proveer las directrices esenciales para la resolución de errores en wrappers y los estándares de Node en Android.
+*   🔮 **Guías de Configuración de Termux:** Reconocimiento especial a las guías de configuración y estándares de Node en Android para la resolución de errores.
 
 ---
 
