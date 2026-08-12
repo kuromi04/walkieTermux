@@ -27,6 +27,7 @@
 | **🕳️ Zero-loop Prevention** | Agents ignore their own messages and historical messages from before startup (`msg.ts <= agentStartTime`), plus cap consecutive exchanges per sender. |
 | **🛡️ Graceful Error Fallback** | If the LLM provider fails mid-response, the agent still replies with a friendly fallback instead of staying silent. |
 | **🔧 Model String Sanitization** | `--model name@provider` is normalized to `name` so both CLI and API always agree on the model identifier. |
+| **⚙️ Declarative Fleet Config** | Define your whole agent fleet once in `config/agents.json` (name, role, CLI, model, prompt) and launch them with `walkie-fleet start`. Secrets stay git-ignored. See [`docs/FLEET.md`](docs/FLEET.md). |
 
 ---
 
@@ -130,6 +131,20 @@ walkie agent canal:(tuclave) --cli jcode --name "Kai" \
   --prompt "You are Kai, an expert Termux & Bash developer. Give direct commands."
 ```
 
+### ⚙️ Declarative fleet config (`walkie-fleet`) — NEW
+
+Instead of hard-coding your agents, define the whole fleet once in a JSON file and let `walkie-fleet` launch them:
+
+```bash
+cp config/agents.example.json config/agents.json   # edit your channel/secret + agents
+walkie-fleet validate                              # sanity-check the config
+walkie-fleet list                                  # show what will be launched
+walkie-fleet start --tmux                          # launch all agents in tmux panels
+walkie-fleet single Nika                           # launch just one agent
+```
+
+Your `config/agents.json` and `.env` are **git-ignored**, so individual keys, prompts and secrets stay local. Full reference: see [`docs/FLEET.md`](docs/FLEET.md).
+
 ### 🎯 How @-mention routing works
 
 | Message | Who responds |
@@ -156,6 +171,8 @@ walkie agent canal:(tuclave) --cli jcode --name "Kai" \
 | `walkie chat <channel>` | Interactive P2P terminal chat |
 | `walkie send <channel> <msg>` | One-shot P2P message |
 | `walkie agent <channel> --cli <cli> --name <n> --prompt <p>` | Run an AI agent listener |
+| `walkie-fleet start [--tmux]` | Launch all agents from `config/agents.json` |
+| `walkie-fleet list` / `validate` / `single <n>` | Inspect, check, or run one agent |
 | `walkie web` | Launch the web dashboard (port 3000) |
 | `walkie daemon` | Start the P2P background daemon |
 

@@ -27,6 +27,7 @@
 | **🕳️ Prevención de Bucles** | Los agentes ignoran sus propios mensajes y los históricos anteriores al arranque (`msg.ts <= agentStartTime`), además de limitar los intercambios consecutivos por remitente. |
 | **🛡️ Respuesta de Respaldo** | Si el proveedor de IA falla a mitad de respuesta, el agente igualmente contesta con un mensaje amistoso en lugar de quedarse en silencio. |
 | **🔧 Sanitización del modelo** | `--model nombre@proveedor` se normaliza a `nombre` para que CLI y API siempre coincidan. |
+| **⚙️ Config de Flota Declarativa** | Defina toda su flota de agentes una sola vez en `config/agents.json` (nombre, rol, CLI, modelo, prompt) y láncela con `walkie-fleet start`. Los secretos quedan en `.gitignore`. Ver [`docs/FLEET.md`](docs/FLEET.md). |
 
 ---
 
@@ -130,6 +131,20 @@ walkie agent canal:secreto --cli jcode --name "Kai" \
   --prompt "Eres Kai, experto en Termux y Bash. Da comandos directos y concisos."
 ```
 
+### ⚙️ Config de flota declarativa (`walkie-fleet`) — NUEVO
+
+En lugar de hardcodear sus agentes en comandos, defina **toda la flota una sola vez** en un JSON y deje que `walkie-fleet` los lance:
+
+```bash
+cp config/agents.example.json config/agents.json   # edite su canal/secreto y sus agentes
+walkie-fleet validate                              # comprueba la config
+walkie-fleet list                                  # muestra lo que se lanzará
+walkie-fleet start --tmux                          # lanza todos en paneles tmux
+walkie-fleet single Nika                           # lanza solo un agente
+```
+
+Su `config/agents.json` y `.env` están en **.gitignore**, así que claves, prompts y secretos quedan en local. Referencia completa: ver [`docs/FLEET.md`](docs/FLEET.md).
+
 ### 🎯 Cómo funciona el ruteo por @mención
 
 | Mensaje | Quién responde |
@@ -156,6 +171,8 @@ walkie agent canal:secreto --cli jcode --name "Kai" \
 | `walkie chat <canal>` | Chat P2P interactivo de terminal |
 | `walkie send <canal> <msg>` | Envío P2P de un solo mensaje |
 | `walkie agent <canal> --cli <cli> --name <n> --prompt <p>` | Ejecutar un oyente de agente de IA |
+| `walkie-fleet start [--tmux]` | Lanzar todos los agentes desde `config/agents.json` |
+| `walkie-fleet list` / `validate` / `single <n>` | Inspeccionar, comprobar o lanzar un agente |
 | `walkie web` | Lanzar el panel web (puerto 3000) |
 | `walkie daemon` | Iniciar el daemon P2P en segundo plano |
 

@@ -2,3 +2,10 @@ node_modules/
 *.log
 .DS_Store
 _archive/
+
+# Secretos y configuración personal (NUNCA subir)
+.env
+.env.*
+!/.env.example
+config/agents.json
+fleet.log

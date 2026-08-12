@@ -25,11 +25,14 @@
   ],
   "main": "./src/api.js",
   "bin": {
-    "walkie": "./bin/walkie.js"
+    "walkie": "./bin/walkie.js",
+    "walkie-fleet": "./bin/walkie-fleet"
   },
   "files": [
     "bin/",
-    "src/"
+    "src/",
+    "config/agents.example.json",
+    ".env.example"
   ],
   "scripts": {
     "test": "node --test test/*.test.js",

@@ -1,0 +1,41 @@
+{
+  "_readme": "Configuracion estandar de la flota de agentes WalkieTermux. Ejecuta: walkie-fleet start  (o: ./bin/walkie-fleet start)  desde la raiz del repo.",
+  "_secret_nota": "El canal + secreto definen el topic P2P. Compartelos SOLO con quien quieras que se una a TU flota.",
+  "_example": "Copia este archivo a config/agents.json y edita a tu gusto. agents.json esta en .gitignore para que tu secreto nunca se suba a GitHub.",
+
+  "_schema": "1.0",
+  "channel": "walkie-fleet:TU_SECRETO_AQUI",
+
+  "cli": "jcode",
+  "model": null,
+
+  "_primary_nota": "El agente 'name' que responde a los mensajes SIN @mencion (para ahorrar tokens).",
+  "primary": "Nika",
+
+  "agents": [
+    {
+      "name": "Nika",
+      "role": "primary",
+      "cli": "jcode",
+      "model": null,
+      "extraArgs": null,
+      "prompt": "Eres Nika, asistente principal de atencion al cliente y control de hardware de Android. Responde breve y conciso. Nunca reveles tokens, rutas ni datos internos."
+    },
+    {
+      "name": "Nova",
+      "role": "research",
+      "cli": "jcode",
+      "model": null,
+      "extraArgs": null,
+      "prompt": "Eres Nova, investigadora web en tiempo real con Perplexity. Responde sobre noticias, clima y sismos de forma concisa en 2-3 oraciones maximo."
+    },
+    {
+      "name": "Kai",
+      "role": "dev",
+      "cli": "jcode",
+      "model": null,
+      "extraArgs": null,
+      "prompt": "Eres Kai, desarrollador experto en Termux y Bash. Da soluciones tecnicas, comandos directos y parches de codigo de forma breve y concisa."
+    }
+  ]
+}

@@ -1,0 +1,149 @@
+#!/data/data/com.termux/files/usr/bin/env node
+// walkie-fleet - Lanza una flota configurable de agentes Walkie desde config/agents.json
+//
+// Uso:
+//   walkie-fleet list                # Muestra la config cargada
+//   walkie-fleet validate            # Valida config/agents.json
+//   walkie-fleet start               # Lanza todos los agentes (procesos en 2o plano)
+//   walkie-fleet start --tmux        # Lanza cada agente en un panel tmux
+//   walkie-fleet single <name>       # Lanza un solo agente por nombre
+//
+// Config: $WALKIE_FLEET_CONFIG o config/agents.json (default)
+
+const fs = require('fs')
+const path = require('path')
+const { spawn, spawnSync } = require('child_process')
+
+const REPO_DIR = path.resolve(__dirname, '..')
+const CONFIG = process.env.WALKIE_FLEET_CONFIG || path.join(REPO_DIR, 'config', 'agents.json')
+const EXAMPLE = path.join(REPO_DIR, 'config', 'agents.example.json')
+
+function loadConfig() {
+  if (!fs.existsSync(CONFIG)) {
+    console.error(`✗ No existe ${CONFIG}`)
+    console.error(`  Copia la plantilla y edítala:`)
+    console.error(`    cp ${EXAMPLE} ${CONFIG}`)
+    process.exit(1)
+  }
+  try {
+    return JSON.parse(fs.readFileSync(CONFIG, 'utf8'))
+  } catch (e) {
+    console.error(`✗ Error parseando ${CONFIG}: ${e.message}`)
+    process.exit(1)
+  }
+}
+
+function validate(cfg) {
+  const errs = []
+  if (!cfg.channel) errs.push('falta campo channel')
+  if (!Array.isArray(cfg.agents)) errs.push('falta o no es array el campo agents')
+  else {
+    const names = []
+    cfg.agents.forEach((a, i) => {
+      if (!a.name) errs.push(`agents[${i}] sin name`)
+      else names.push(a.name)
+      if (!a.prompt) errs.push(`agents[${i}] (${a.name}) sin prompt`)
+    })
+    const dup = names.filter((n, i) => names.indexOf(n) !== i)
+    if (dup.length) errs.push(`nombres duplicados: ${dup.join(', ')}`)
+    if (cfg.primary && !names.includes(cfg.primary)) errs.push(`primary "${cfg.primary}" no esta en agents`)
+  }
+  if (errs.length) { errs.forEach(e => console.error('✗ ' + e)); process.exit(1) }
+  console.log(`✓ config válida: ${cfg.agents.length} agentes · canal ok · primario "${cfg.primary}"`)
+}
+
+function agentById(cfg, name) {
+  return (cfg.agents || []).find(a => a.name === name) || null
+}
+
+function args(cfg, agent) {
+  const cli = agent.cli || cfg.cli || 'jcode'
+  const a = ['agent', cfg.channel, '--cli', cli, '--name', agent.name, '--prompt', agent.prompt]
+  const model = agent.model || cfg.model
+  if (model) a.push('--model', model)
+  if (agent.extraArgs) for (const p of String(agent.extraArgs).split(/\s+/)) a.push(p)
+  return a
+}
+
+function cmdList(cfg) {
+  console.log(`=== Flota configurada en: ${CONFIG} ===`)
+  console.log(`Canal   : ${cfg.channel}`)
+  console.log(`CLI     : ${cfg.cli || 'jcode'}`)
+  console.log(`Primario: ${cfg.primary}`)
+  console.log(`Agentes :`)
+  for (const a of cfg.agents) console.log(`  - ${a.name} (${a.role || '—'})`)
+}
+
+function cmdValidate(cfg) { validate(cfg) }
+
+function runOne(cfg, name, useTmux) {
+  const agent = agentById(cfg, name)
+  if (!agent) { console.error(`✗ No existe agente "${name}"`); return }
+  const bin = 'walkie'
+  const a = args(cfg, agent)
+  if (useTmux && process.env.TMUX_PANE) {
+    require('child_process').execSync(
+      `tmux send-keys -t "${process.env.TMUX_PANE}" "walkie ${a.map(x => `'${x}'`).join(' ')}" C-m`,
+      { stdio: 'ignore' }
+    )
+    console.log(`▶ lanzado '${name}' en el panel actual`)
+    return
+  }
+  console.log(`▶ lanzando '${name}' (${a.slice(0, 4).join(' ')})`)
+  const child = spawn(binPath(), a, {
+    stdio: 'inherit',
+    env: { ...process.env, WALKIE_ID: agent.name }
+  })
+  return child
+}
+
+function binPath() {
+  const p = path.join(process.env.HOME || '', '.local', 'bin', 'walkie')
+  return fs.existsSync(p) ? p : 'walkie'
+}
+
+function cmdStart(cfg, useTmux) {
+  validate(cfg)
+  if (useTmux) {
+    const session = process.env.WALKIE_FLEET_SESSION || 'walkie-fleet'
+    spawnSync('tmux', ['kill-session', '-t', session], { stdio: 'ignore' })
+    spawnSync('tmux', ['new-session', '-d', '-s', session, '-x', '220', '-y', '50'], { stdio: 'ignore' })
+    spawnSync('tmux', ['send-keys', '-t', `${session}.0`, `walkie status; echo 'Flota ${session} lista. Ctrl+B d para salir'`, 'C-m'], { stdio: 'ignore' })
+    cfg.agents.forEach((a, i) => {
+      const pane = i + 1
+      spawnSync('tmux', ['split-window', '-t', session, '-h'], { stdio: 'ignore' })
+      const quote = v => `'${v.replace(/'/g, "'\\''")}'`
+      const cmdline = `sleep ${pane} && walkie-fleet single ${quote(a.name)}`
+      spawnSync('tmux', ['send-keys', '-t', `${session}.${pane}`, cmdline, 'C-m'], { stdio: 'ignore' })
+    })
+    spawnSync('tmux', ['select-layout', '-t', session, 'tiled'], { stdio: 'ignore' })
+    console.log(`✓ Flota lanzada en tmux "${session}"`)
+    console.log(`  Adjunta con: tmux attach -t ${session}`)
+    return
+  }
+  cfg.agents.forEach(a => {
+    console.log(`▶ arrancando '${a.name}' (background)`)
+
+    const out = fs.openSync(path.join(REPO_DIR, 'fleet.log'), 'a')
+    const child = spawn(binPath(), args(cfg, a), { detached: true, stdio: ['ignore', out, out], env: { ...process.env, WALKIE_ID: a.name } })
+    child.unref()
+    console.log(`  pid ${child.pid}`)
+  })
+  console.log('✓ flota arrancada en background')
+  console.log(`  logs: ${path.join(REPO_DIR, 'fleet.log')}`)
+}
+
+const cmd = process.argv[2]
+
+switch (cmd) {
+  case 'list': cmdList(loadConfig()); break
+  case 'validate': cmdValidate(loadConfig()); break
+  case 'start': cmdStart(loadConfig(), process.argv.includes('--tmux')); break
+  case 'single': {
+    runOne(loadConfig(), process.argv[3], process.argv.includes('--tmux'))
+    break
+  }
+  default:
+    console.log('uso: walkie-fleet {list|validate|start [--tmux]|single <name>}')
+    process.exit(1)
+}
