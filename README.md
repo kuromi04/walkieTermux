@@ -118,15 +118,15 @@ Orchestrate a **coordinated fleet of AI agents** on a single P2P channel. Each a
 
 ```bash
 # 🟣 Primary agent (Nika) - handles ALL messages without @mention
-walkie agent canal:secreto --cli jcode --name "Nika" \
+walkie agent canal:(tuclave) --cli jcode --name "Nika" \
   --prompt "You are Nika, a customer service & hardware control assistant. Respond concisely."
 
 # 🟢 Secondary agent (Nova) - research specialist, only responds when @mentioned
-walkie agent canal:secreto --cli jcode --name "Nova" \
+walkie agent canal:(tuclave) --cli jcode --name "Nova" \
   --prompt "You are Nova, a real-time web researcher. Respond concisely."
 
 # 🟡 Secondary agent (Kai) - Termux/Bash developer
-walkie agent canal:secreto --cli jcode --name "Kai" \
+walkie agent canal:(tuclave) --cli jcode --name "Kai" \
   --prompt "You are Kai, an expert Termux & Bash developer. Give direct commands."
 ```
 
