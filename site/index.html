@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WalkieTermux — Orquestación P2P de Agentes de IA</title>
+  <meta name="description" content="Orquestación descentralizada de agentes de IA en Termux. Comunicación 100% P2P sin servidores. Ruteo por @mención, notas de voz y seguridad integrada.">
+  <meta property="og:title" content="WalkieTermux — Orquestación P2P de Agentes de IA">
+  <meta property="og:description" content="Orquestación descentralizada de agentes de IA en Termux. Ruteo por @mención, notas de voz y seguridad integrada.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://kuromi04.github.io/walkieTermux/">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐾</text></svg>">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0a0c10;
+      --surface: #12161d;
+      --border: #1e242e;
+      --text: #e6e9ef;
+      --muted: #8b93a1;
+      --accent: #22c55e;
+      --accent-dim: #16a34a;
+      --purple: #a78bfa;
+      --cyan: #22d3ee;
+      --yellow: #facc15;
+      --mono: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container { max-width: 900px; margin: 0 auto; padding: 0 24px; }
+
+    /* Nav */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(10,12,16,0.85);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .nav-logo { font-weight: 700; font-size: 1.05rem; color: var(--text); }
+    .nav-logo .accent { color: var(--accent); }
+    .nav-links { display: flex; gap: 24px; }
+    .nav-links a { color: var(--muted); text-decoration: none; font-size: 0.9rem; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--accent); }
+
+    /* Hero */
+    .hero { padding: 96px 0 64px; text-align: center; }
+    .hero .kicker {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--accent);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 16px;
+      margin-bottom: 24px;
+      background: rgba(34,197,94,0.06);
+    }
+    .hero h1 {
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 20px;
+    }
+    .hero h1 .grad {
+      background: linear-gradient(90deg, var(--accent), var(--purple));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .hero .tagline {
+      font-size: 1.2rem;
+      color: var(--muted);
+      max-width: 620px;
+      margin: 0 auto 36px;
+    }
+    .hero-cta { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 13px 24px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-decoration: none;
+      transition: transform 0.15s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+    .btn-primary { background: var(--accent); color: #04120a; box-shadow: 0 4px 24px rgba(34,197,94,0.25); }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(34,197,94,0.4); }
+    .btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    .btn-ghost:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+    /* Stats / points */
+    .points {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      padding: 32px 0 24px;
+    }
+    .point { text-align: center; padding: 20px 12px; }
+    .point .value { font-size: 1.4rem; font-weight: 700; font-family: var(--mono); color: var(--accent); }
+    .point .label { font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 4px; }
+
+    /* Section */
+    .section { padding: 56px 0; }
+    .section-header {
+      font-size: 1.15rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+    .section-title {
+      font-size: clamp(1.6rem, 3vw, 2.2rem);
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .section-sub { text-align: center; color: var(--muted); max-width: 640px; margin: 0 auto 44px; font-size: 0.98rem; }
+
+    /* Agents */
+    .agents { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .agent {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px 22px;
+      text-align: center;
+      transition: border-color 0.25s, transform 0.2s;
+    }
+    .agent:hover { border-color: var(--accent); transform: translateY(-4px); }
+    .agent .avatar {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.6rem;
+      margin: 0 auto 16px;
+    }
+    .agent .avatar.primary { background: rgba(167,139,250,0.15); }
+    .agent .avatar.secondary-r { background: rgba(34,211,238,0.15); }
+    .agent .avatar.secondary-y { background: rgba(250,204,21,0.15); }
+    .agent .role-tag {
+      display: inline-block;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 3px 10px;
+      border-radius: 999px;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    .role-tag.primary { background: rgba(167,139,250,0.15); color: var(--purple); }
+    .role-tag.r { background: rgba(34,211,238,0.15); color: var(--cyan); }
+    .role-tag.y { background: rgba(250,204,21,0.15); color: var(--yellow); }
+    .agent h3 { font-size: 1.25rem; margin-bottom: 6px; }
+    .agent .desc { font-size: 0.88rem; color: var(--muted); }
+
+    /* Features */
+    .features { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .feature {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      transition: border-color 0.2s;
+    }
+    .feature:hover { border-color: var(--accent); }
+    .feature .icon { font-size: 1.8rem; margin-bottom: 12px; }
+    .feature h3 { font-size: 1.05rem; margin-bottom: 8px; }
+    .feature p { font-size: 0.9rem; color: var(--muted); }
+
+    /* Router table */
+    .router-table { width: 100%; border-collapse: collapse; }
+    .router-table th {
+      text-align: left;
+      padding: 12px 16px;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .router-table td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+    .router-table td code { font-family: var(--mono); font-size: 0.85em; background: var(--surface); padding: 2px 8px; border-radius: 5px; }
+    .router-table td:last-child { color: var(--muted); }
+    .router-table tr:last-child td { border-bottom: none; }
+
+    /* Getting started */
+    .step { display: flex; gap: 20px; margin-bottom: 20px; }
+    .step-num {
+      flex-shrink: 0;
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      background: rgba(34,197,94,0.12);
+      border: 1px solid rgba(34,197,94,0.3);
+      color: var(--accent);
+      font-weight: 700;
+      font-family: var(--mono);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.95rem;
+    }
+    .step-body h3 { font-size: 1.02rem; margin-bottom: 6px; }
+    .step-body p { font-size: 0.92rem; color: var(--muted); margin-bottom: 12px; }
+    .codeblock {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 18px;
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      line-height: 1.75;
+      overflow-x: auto;
+      color: var(--text);
+    }
+    .codeblock .c { color: #4b5563; }
+    .codeblock .k { color: #7dd3fc; }
+    .codeblock .s { color: #86efac; }
+    .codeblock .n { color: #d8b4fe; }
+
+    /* Diagram */
+    .diagram-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 44px 32px;
+      margin-top: 12px;
+    }
+    .diagram-topic { text-align: center; font-family: var(--mono); font-size: 0.85rem; color: var(--muted); margin-bottom: 32px; }
+    .diagram-peers { display: flex; align-items: center; justify-content: center; }
+    .diagram-agent { text-align: center; }
+    .diagram-agent .agent-label { color: var(--accent); font-weight: 600; font-size: 0.82rem; margin-bottom: 8px; font-family: var(--mono); }
+    .diagram-agent .agent-box {
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 18px 26px;
+      font-family: var(--mono);
+      font-size: 0.88rem;
+      line-height: 1.6;
+    }
+    .diagram-link { display: flex; flex-direction: column; align-items: center; padding: 0 22px; gap: 4px; }
+    .diagram-link .link-arrow { font-family: var(--mono); font-size: 0.82rem; color: var(--accent); white-space: nowrap; }
+    .diagram-link .link-sub { font-size: 0.72rem; color: var(--muted); }
+    .diagram-footer { text-align: center; color: var(--muted); font-family: var(--mono); font-size: 0.8rem; margin-top: 32px; line-height: 1.7; }
+
+    /* CTA band */
+    .cta-band {
+      background: linear-gradient(135deg, rgba(34,197,94,0.08), rgba(167,139,250,0.08));
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 48px 32px;
+      text-align: center;
+      margin: 24px 0 8px;
+    }
+    .cta-band h2 { font-size: 1.6rem; margin-bottom: 12px; }
+    .cta-band p { color: var(--muted); margin-bottom: 28px; max-width: 520px; margin-left: auto; margin-right: auto; }
+
+    /* Footer */
+    .footer { padding: 56px 0 40px; text-align: center; border-top: 1px solid var(--border); margin-top: 48px; }
+    .footer-links { display: flex; justify-content: center; gap: 28px; margin-bottom: 16px; flex-wrap: wrap; }
+    .footer-links a { color: var(--muted); text-decoration: none; font-size: 0.9rem; transition: color 0.2s; }
+    .footer-links a:hover { color: var(--accent); }
+    .footer .copy { color: #3d4552; font-size: 0.8rem; }
+
+    /* Responsive */
+    @media (max-width: 700px) {
+      .points { grid-template-columns: repeat(2, 1fr); }
+      .agents { grid-template-columns: 1fr; }
+      .features { grid-template-columns: 1fr; }
+      .diagram-peers { flex-direction: column; gap: 14px; }
+      .diagram-link { padding: 10px 0; }
+      .nav-links { gap: 14px; }
+      .hero { padding: 72px 0 48px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <div class="nav-logo">🐾 <span class="accent">Walkie</span>Termux</div>
+      <div class="nav-links">
+        <a href="#agentes">Agentes</a>
+        <a href="#caracteristicas">Features</a>
+        <a href="#ruteo">Ruteo</a>
+        <a href="#instalacion">Instalación</a>
+        <a href="#como-funciona">Cómo funciona</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+
+    <!-- HERO -->
+    <section class="hero">
+      <span class="kicker">P2P · Descentralizado · Sin servidores</span>
+      <h1>Orquesta una flota de<br><span class="grad">agentes de IA en Termux</span></h1>
+      <p class="tagline">Comunicación 100% punto a punto para agentes basados en jcode. Sin servidor, sin configuración, sin nube. Solo diles qué hacer.</p>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="#instalacion">🚀 Empezar ahora</a>
+        <a class="btn btn-ghost" href="#ags">Ver los agentes</a>
+      </div>
+    </section>
+
+    <!-- STATS -->
+    <section class="points">
+      <div class="point"><div class="value">100%</div><div class="label">P2P</div></div>
+      <div class="point"><div class="value">0</div><div class="label">Servidores</div></div>
+      <div class="point"><div class="value">3+</div><div class="label">Agentes</div></div>
+      <div class="point"><div class="value">🔐</div><div class="label">Encrypted</div></div>
+    </section>
+
+    <!-- AGENTS -->
+    <section class="section" id="ags">
+      <h2 class="section-header">El equipo</h2>
+      <h3 class="section-title">¿Quién responde a qué?</h3>
+      <p class="section-sub">Cada agente escucha el mismo canal P2P con un rol distinto. El <strong>router por @mención</strong> decide quién contesta según la conversación.</p>
+      <div class="agents">
+        <div class="agent">
+          <div class="avatar primary">🟣</div>
+          <span class="role-tag primary">Agente primario</span>
+          <h3>Nika</h3>
+          <p class="desc">Atención al cliente y control de hardware de Android. Responde a todos los mensajes sin mención para no gastar tokens.</p>
+        </div>
+        <div class="agent">
+          <div class="avatar secondary-r">🟢</div>
+          <span class="role-tag r">Investigadora</span>
+          <h3>Nova</h3>
+          <p class="desc">Investigación web en tiempo real con Perplexity. Solo responde cuando la mencionas explícitamente con @Nova.</p>
+        </div>
+        <div class="agent">
+          <div class="avatar secondary-y">🟡</div>
+          <span class="role-tag y">Desarrolladora</span>
+          <h3>Kai</h3>
+          <p class="desc">Experta en Termux y Bash. Da soluciones técnicas y parches de código. Solo participa cuando la llamas con @Kai.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section class="section" id="caracteristicas">
+      <h2 class="section-header">Características</h2>
+      <h3 class="section-title">Todo lo que hace único a esta flota</h3>
+      <div class="features">
+        <div class="feature">
+          <div class="icon">🎯</div>
+          <h3>Ruteo por @mención</h3>
+          <p>Mensajes sin mención los maneja solo el agente primario. Con mención, responde únicamente el agente indicado. Cero "carreras" de respuesta.</p>
+        </div>
+        <div class="feature">
+          <div class="icon">🗣️</div>
+          <h3>Notas de voz</h3>
+          <p>Transcribe el audio entrante con Whisper, ejecuta la orden y responde con audio sintetizado por Fish Audio.</p>
+        </div>
+        <div class="feature">
+          <div class="icon">🔒</div>
+          <h3>Seguridad anti-inyección</h3>
+          <p>Regla de seguridad por defecto en cada prompt: nunca revelar tokens, rutas ni archivos internos. Rechaza jailbreaks e inyección de prompt.</p>
+        </div>
+        <div class="feature">
+          <div class="icon">🕳️</div>
+          <h3>Anti-bucles</h3>
+          <p>Ignora los propios mensajes y los históricos anteriores al arranque. Limita los intercambios consecutivos por remitente.</p>
+        </div>
+        <div class="feature">
+          <div class="icon">🛡️</div>
+          <h3>Respaldo de errores</h3>
+          <p>Si el proveedor de IA falla, el agente contesta con un mensaje amistoso en lugar de quedarse en silencio.</p>
+        </div>
+        <div class="feature">
+          <div class="icon">🖥️</div>
+          <h3>Hecho para Termux</h3>
+          <p>Compatibilidad con el ecosistema jcode y glibc en Android. Puente de entorno limpio para ejecutar IAs desde Node.js.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ROUTER -->
+    <section class="section" id="ruteo">
+      <h2 class="section-header">Router</h2>
+      <h3 class="section-title">Quién responde a cada mensaje</h3>
+      <table class="router-table">
+        <tr><th>Mensaje</th><th>Responde</th></tr>
+        <tr><td><code>@Nova ¿qué tiempo hace?</code></td><td>Solo Nova</td></tr>
+        <tr><td><code>prende la linterna</code></td><td>Solo Nika (primaria)</td></tr>
+        <tr><td><code>@Nika @Kai ayúdame con esto</code></td><td>Nika y Kai</td></tr>
+        <tr><td><code>@Nova @Nika investiga y controla</code></td><td>Nova y Nika</td></tr>
+      </table>
+    </section>
+
+    <!-- INSTALL -->
+    <section class="section" id="instalacion">
+      <h2 class="section-header">Instalación</h2>
+      <h3 class="section-title">En marcha en 4 pasos</h3>
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h3>Instala los requisitos en Termux</h3>
+          <div class="codeblock"><span class="c"># Actualiza los paquetes e instala Node.js y Git</span>
+<span class="k">$</span> pkg update <span class="k">&amp;&amp;</span> pkg upgrade -y
+<span class="k">$</span> pkg install nodejs git -y</div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h3>Clona este repositorio</h3>
+          <div class="codeblock"><span class="k">$</span> git clone https://github.com/kuromi04/walkieTermux.git
+<span class="k">$</span> <span class="n">cd</span> walkieTermux</div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h3>Instala las dependencias</h3>
+          <div class="codeblock"><span class="k">$</span> npm install</div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <h3>Lanza tu flota de agentes</h3>
+          <div class="codeblock"><span class="c"># 🟣 Agente primario: maneja todo sin mención</span>
+<span class="k">$</span> walkie agent canal:secreto --cli jcode --name <span class="s">"Nika"</span> --prompt <span class="s">"Eres Nika, asistente de atencion al cliente y control de hardware."</span>
+
+<span class="c"># 🟢 Investigadora: solo con @Nova</span>
+<span class="k">$</span> walkie agent canal:secreto --cli jcode --name <span class="s">"Nova"</span> --prompt <span class="s">"Eres Nova, investigadora web en tiempo real."</span>
+
+<span class="c"># 🟡 Desarrolladora: solo con @Kai</span>
+<span class="k">$</span> walkie agent canal:secreto --cli jcode --name <span class="s">"Kai"</span> --prompt <span class="s">"Eres Kai, experta en Termux y Bash."</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="section" id="como-funciona">
+      <h2 class="section-header">Cómo funciona</h2>
+      <h3 class="section-title">Se encuentran solos, sin servidor</h3>
+      <div class="diagram-box">
+        <div class="diagram-topic">Nombre + Secreto &nbsp;&rarr;&nbsp; SHA-256 &nbsp;&rarr;&nbsp; Topic</div>
+        <div class="diagram-peers">
+          <div class="diagram-agent">
+            <div class="agent-label">Nika</div>
+            <div class="agent-box">walkie<br>daemon</div>
+          </div>
+          <div class="diagram-link">
+            <div class="link-arrow">&larr; P2P cifrado &rarr;</div>
+            <div class="link-sub">vía HyperSwarm DHT</div>
+          </div>
+          <div class="diagram-agent">
+            <div class="agent-label">Nova · Kai</div>
+            <div class="agent-box">walkie<br>daemon</div>
+          </div>
+        </div>
+        <div class="diagram-footer">Sin servidor. Sin IPs manuales. Sin configuración.<br>Un mismo canal + secreto, y todos se encuentran automáticamente.</div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta-band">
+      <h2>¿Listo para desplegar tu flota?</h2>
+      <p>Dale a tus agentes un walkie-talkie P2P. Sin infraestructura, solo terminales que se escuchan entre sí.</p>
+      <div style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap;">
+        <a class="btn btn-primary" href="#instalacion">Comenzar</a>
+        <a class="btn btn-ghost" href="https://github.com/kuromi04/walkieTermux">⭐ GitHub</a>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="footer-links">
+        <a href="https://github.com/kuromi04/walkieTermux">GitHub</a>
+        <a href="https://github.com/kuromi04/walkieTermux/blob/main/LICENSE">MIT License</a>
+        <a href="#instalacion">Instalación</a>
+      </div>
+      <p class="copy">WalkieTermux · Orquestación P2P de agentes de IA · © kuromi04</p>
+    </footer>
+
+  </div>
+
+</body>
+</html>
