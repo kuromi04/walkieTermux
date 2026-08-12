@@ -135,6 +135,63 @@ function cmdStart(cfg, useTmux) {
 
 const cmd = process.argv[2]
 
+function printHelp() {
+  console.log(`
+walkie-fleet — Lanza una flota configurable de agentes Walkie desde config/agents.json
+
+USO:
+  walkie-fleet <comando> [opciones]
+
+COMANDOS:
+  list                  Muestra el canal, CLI, primario y agentes configurados.
+  validate              Valida config/agents.json (canal, nombres, prompts, duplicados, primario).
+  start [--tmux]        Lanza todos los agentes de la config.
+                          sin bandera: procesos en segundo plano (log: fleet.log)
+                          --tmux:      cada agente en un panel tmux (sesión walkie-fleet)
+  single <nombre>       Lanza un solo agente por nombre (útil para probar).
+  help | --help | -h    Muestra esta ayuda.
+
+CONFIG:
+  Lee config/agents.json por defecto. Sobrescribe con la variable de entorno:
+    WALKIE_FLEET_CONFIG=/ruta/a/agents.json
+
+VARIABLES DE ENTORNO:
+  WALKIE_FLEET_CONFIG   Ruta alternativa al archivo de config.
+  WALKIE_FLEET_SESSION  Nombre de la sesión tmux para "start --tmux".
+  WALKIE_ID             ID de este agente/daemon (para logs).
+  WALKIE_TTL            Segundos que un mensaje queda vivo en caché P2P.
+  WALKIE_DIR            Carpeta de mensajes/historial (por defecto ~/.walkie).
+
+FORMATO DE config/agents.json:
+  {
+    "channel": "canal-agentes:MI-SECRETO",   // canal + secreto (se hashean al topic P2P)
+    "cli": "jcode",
+    "model": null,
+    "primary": "Nika",                        // responde mensajes SIN @mención
+    "agents": [
+      { "name": "Nika", "role": "primary", "cli": "jcode", "model": null, "extraArgs": null,
+        "prompt": "Eres Nika..." }
+    ]
+  }
+  Ver plantilla completa en config/agents.example.json y la guía en docs/FLEET.md.
+
+EJEMPLOS:
+  cp config/agents.example.json config/agents.json   # crear tu config
+  walkie-fleet validate                               # comprobar la config
+  walkie-fleet list                                   # ver lo que se lanzará
+  walkie-fleet start --tmux                           # lanzar toda la flota
+  walkie-fleet single Nika                            # lanzar solo un agente
+
+OTROS COMANDOS DEL ECOSISTEMA (walkie):
+  walkie chat <canal:secreto>     Chat P2P interactivo (mismo canal = mismo topic)
+  walkie agent <canal:secreto> --cli <cli> --name <n> --prompt <p>   Oyente de agente IA
+  walkie send <canal:secreto> <msg>   Envío P2P de un solo mensaje
+  walkie web                     Panel web (puerto 3000)
+  walkie daemon                  Daemon P2P en segundo plano
+  walkie status                  Estado de la sesión/daemon
+`)
+}
+
 switch (cmd) {
   case 'list': cmdList(loadConfig()); break
   case 'validate': cmdValidate(loadConfig()); break
@@ -143,7 +200,12 @@ switch (cmd) {
     runOne(loadConfig(), process.argv[3], process.argv.includes('--tmux'))
     break
   }
+  case 'help':
+  case '--help':
+  case '-h':
+    printHelp()
+    break
   default:
-    console.log('uso: walkie-fleet {list|validate|start [--tmux]|single <name>}')
-    process.exit(1)
+    printHelp()
+    process.exit(0)
 }
