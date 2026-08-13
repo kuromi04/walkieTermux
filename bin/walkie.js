@@ -366,7 +366,7 @@ program
             let transcript = ''
             try {
               const { spawnSync } = require('child_process')
-              const r = spawnSync('whisper', [audioPath, '--model', 'tiny', '--language', 'es', '--output_format', 'txt'], { encoding: 'utf8', timeout: 15000 })
+              const r = spawnSync('whisper', [audioPath, '--model', 'base', '--language', 'es', '--output_format', 'txt'], { encoding: 'utf8', timeout: 90000 })
               if (r.status === 0) {
                 const fs = require('fs')
                 const txtPath = audioPath.replace(/\.[^.]+$/, '.txt')
@@ -377,9 +377,9 @@ program
             } catch {}
 
             if (transcript) {
-              msgData = `[Nota de voz transcrita: "${transcript}"]. Ejecuta la instrucción (ej: prender/apagar linterna, wifi, bluetooth). SIEMPRE genera la respuesta sintetizada en audio mediante Fish Audio guardando en /sdcard/Download/voice.ogg y agrega al final en una nueva línea: file:/sdcard/Download/voice.ogg`
+              msgData = `[Nota de voz transcrita: "${transcript}"]. Ejecuta la instrucción (ej: prender/apagar linterna, wifi, bluetooth). SIEMPRE genera la respuesta sintetizada en audio ejecutando: walkie-tts "TEXTO_RESPUESTA" /sdcard/Download/voice.ogg (sustituye TEXTO_RESPUESTA por tu respuesta). Agrega al final en una nueva línea: file:/sdcard/Download/voice.ogg`
             } else {
-              msgData = `[Nota de voz recibida en ${audioPath}]. Escucha e interpreta la orden del audio (ej: prender linterna, tomar foto). Ejecuta la instrucción inmediatamente. Genera la respuesta en audio mediante Fish Audio API y pon al final: file:/sdcard/Download/voice.ogg`
+              msgData = `[Nota de voz recibida en ${audioPath}]. Escucha e interpreta la orden del audio (ej: prender linterna, tomar foto). Ejecuta la instrucción inmediatamente. Genera la respuesta en audio ejecutando: walkie-tts "TEXTO_RESPUESTA" /sdcard/Download/voice.ogg y pon al final: file:/sdcard/Download/voice.ogg`
             }
           }
           const prompt = opts.prompt
