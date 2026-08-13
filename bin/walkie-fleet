@@ -135,6 +135,275 @@ function cmdStart(cfg, useTmux) {
 
 const cmd = process.argv[2]
 
+// ---------------------------------------------------------------------------
+//  Modo INTERACTIVO: walkie-fleet run
+//  Pregunta por consola el canal, el secreto (opcional) y qué agentes lanzar,
+//  SIN tener que editar config/agents.json en cada ejecución.
+// ---------------------------------------------------------------------------
+function promptAsync(rl, q, def) {
+  return new Promise(res => {
+    rl.question(`  ${q}${def !== undefined ? ` [${def}]` : ''}: `, a => {
+      const v = (a || '').trim()
+      res(v === '' ? def : v)
+    })
+  })
+}
+
+// Prompt que permite dejar vacío de verdad (devuelve '' si no se escribe nada).
+function promptEmpty(rl, q, hint) {
+  return new Promise(res => {
+    rl.question(`  ${q}${hint ? ` [${hint}]` : ''}: `, a => {
+      res((a || '').trim())
+    })
+  })
+}
+
+async function cmdRun() {
+  const cfg = loadConfig()
+  let rl
+  try {
+    rl = require('readline').createInterface({ input: process.stdin, output: process.stdout })
+  } catch (e) {
+    console.error('✗ readline no disponible; usa config/agents.json')
+    process.exit(1)
+  }
+
+  console.log('\n=== walkie-fleet run (lanzamiento interactivo) ===')
+  console.log('  (deja en blanco para usar el valor por defecto de tu agents.json)\n')
+
+  const defChannel = cfg.channel
+  const channel = await promptAsync(rl, 'Nombre del canal o canal:secreto', defChannel)
+  const col = channel.indexOf(':')
+  let canalName = col === -1 ? channel : channel.slice(0, col).trim()
+  let secret = col === -1 ? null : channel.slice(col + 1).trim()
+
+  // Heredar el secreto de la config como pista (pero vacío = sin secreto)
+  const cfgSecret = (cfg.channel || '').split(':').slice(1).join(':') || ''
+
+  if (secret === null) {
+    // No vino secreto junto al canal: preguntar. Vacío = SIN secreto.
+    const hint = cfgSecret ? ` (config: ${cfgSecret})` : ''
+    secret = await promptEmpty(rl, `Secreto${hint}`, '')
+  }
+
+  if (!canalName) { console.error('✗ Canal obligatorio'); process.exit(1) }
+
+  const fullChannel = secret ? `${canalName}:${secret}` : canalName
+
+  // Elegir agentes existentes y/o crear nuevos
+  const { chosen, created } = await chooseAndCreateAsync(rl, cfg)
+
+  if (!chosen.length) { console.error('✓ Ningún agente seleccionado. Nada que lanzar.'); process.exit(0) }
+
+  // Persistir agentes nuevos (opcional)
+  if (created.length) {
+    const save = await promptAsync(rl, `\n¿Guardar ${created.length} agente(s) nuevo(s) en config/agents.json? (s/n)`, 's')
+    if (/^s|^y/i.test(save)) saveAgentsToConfig(cfg, created)
+  }
+
+  // Mostrar resumen y confirmar
+  console.log(`\n  Canal   : ${fullChannel}`)
+  console.log(`  Agentes : ${chosen.map(a => a.name).join(', ')}`)
+  if (created.length) console.log(`  Nuevos  : ${created.map(a => a.name).join(', ')}`)
+  const tmux = await promptAsync(rl, '\n¿Lanzar en paneles tmux? (s/n)', 'n')
+
+  rl.close()
+
+  const buildCfg = { ...cfg, channel: fullChannel, agents: chosen }
+  const useTmux = /^s|^y/i.test(tmux)
+
+  if (useTmux) {
+    // lanzar cada agente en un panel de la sesión actual o nueva
+    const session = process.env.WALKIE_FLEET_SESSION || 'walkie-fleet'
+    require('child_process').spawnSync('tmux', ['kill-session', '-t', session], { stdio: 'ignore' })
+    require('child_process').spawnSync('tmux', ['new-session', '-d', '-s', session, '-x', '220', '-y', '50'], { stdio: 'ignore' })
+    chosen.forEach((a, i) => {
+      const pane = i + 1
+      require('child_process').spawnSync('tmux', ['split-window', '-t', session, '-h'], { stdio: 'ignore' })
+      const q = v => `'${v.replace(/'/g, "'\\''")}'`
+      // Lanzar cada uno en su panel con canal ya fijo
+      let cmdline = `sleep ${pane} && walkie agent ${q(fullChannel)} --cli ${q(a.cli || cfg.cli || 'jcode')} --name ${q(a.name)} --prompt ${q(a.prompt)}`
+      const model = a.model || cfg.model
+      if (model) cmdline += ` --model ${q(model)}`
+      if (a.extraArgs) for (const p of String(a.extraArgs).split(/\s+/)) cmdline += ` ${q(p)}`
+      cmdline += '; exec bash'
+      require('child_process').spawnSync('tmux', ['send-keys', '-t', `${session}.${pane}`, cmdline, 'C-m'], { stdio: 'ignore' })
+    })
+    require('child_process').spawnSync('tmux', ['select-layout', '-t', session, 'tiled'], { stdio: 'ignore' })
+    console.log(`✓ Flota lanzada en tmux "${session}"`)
+    console.log(`  Adjunta: tmux attach -t ${session}`)
+  } else {
+    chosen.forEach(a => {
+      const bin = binPath()
+      const a2 = ['agent', fullChannel, '--cli', a.cli || cfg.cli || 'jcode', '--name', a.name, '--prompt', a.prompt]
+      const model = a.model || cfg.model
+      if (model) a2.push('--model', model)
+      if (a.extraArgs) for (const p of String(a.extraArgs).split(/\s+/)) a2.push(p)
+      const out = fs.openSync(path.join(REPO_DIR, 'fleet.log'), 'a')
+      const child = spawn('bash', ['-c', `${bin} ${a2.map(x => `'${x.replace(/'/g, "'\\''")}'`).join(' ')}`], {
+        detached: true, stdio: ['ignore', out, out],
+        env: { ...process.env, WALKIE_ID: a.name }
+      })
+      child.unref()
+      console.log(`  ▶ '${a.name}' pid ${child.pid}`)
+    })
+    console.log('✓ flota arrancada en background')
+    console.log(`  logs: ${path.join(REPO_DIR, 'fleet.log')}`)
+  }
+}
+
+// Crear un agente nuevo interactivamente (nombre, rol, prompt, cli, model).
+// Devuelve el objeto agente o null si el usuario cancela.
+async function createAgentAsync(rl, cfg) {
+  console.log('\n  --- Crear nuevo agente ---')
+  const name = await promptEmpty(rl, 'Nombre (único, ej. "Luna")')
+  if (!name) { console.log('  ✗ Nombre obligatorio. Agente no creado.'); return null }
+
+  // evitar duplicar un nombre ya existente (incluidos los recién creados)
+  const existing = (cfg.agents || []).map(a => a.name)
+  if (existing.includes(name)) { console.log(`  ✗ Ya existe un agente llamado "${name}". Agente no creado.`); return null }
+
+  const role = await promptEmpty(rl, 'Rol (opcional, ej. support/dev/research)')
+  const promptText = await promptEmpty(rl, 'Prompt del agente (instrucciones de sistema)')
+  if (!promptText) { console.log('  ✗ Prompt obligatorio. Agente no creado.'); return null }
+
+  const cli = await chooseCliAsync(rl, cfg)                        // null = heredar default
+  const model = cli ? await chooseModelAsync(rl, cli) : null      // null = sin modelo
+
+  const agent = {
+    name,
+    prompt: promptText,
+    cli: cli || null,
+    model: model || null,
+    extraArgs: null
+  }
+  if (role) agent.role = role
+  return agent
+}
+
+// Guarda agentes nuevos de vuelta en config/agents.json (preservando el resto).
+function saveAgentsToConfig(cfg, newAgents) {
+  try {
+    const merged = { ...cfg, agents: (cfg.agents || []).concat(newAgents) }
+    fs.writeFileSync(CONFIG, JSON.stringify(merged, null, 2) + '\n')
+    console.log(`  ✓ Guardado en ${CONFIG}`)
+  } catch (e) {
+    console.error(`  ✗ No se pudo guardar la config: ${e.message}`)
+  }
+}
+
+// CLIs "más comunes" que puede usar un agente de la flota.
+const KNOWN_CLIS = ['jcode', 'claude', 'codex', 'ollama', 'lmstudio', 'perplexity']
+
+function installedClis() {
+  const { spawnSync } = require('child_process')
+  return KNOWN_CLIS.filter(c => {
+    const r = spawnSync('which', [c], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
+    return r.status === 0
+  })
+}
+
+// Lista los modelos disponibles de un backend de IA. Devuelve [] si no se puede.
+function listModelsFor(cli) {
+  const { spawnSync } = require('child_process')
+  const attempts = {
+    jcode: { cmd: 'jcode', args: ['model', 'list'], timeout: 15000 },
+    ollama: { cmd: 'ollama', args: ['list'], timeout: 8000 },
+    claude: { cmd: 'agy', args: ['models'], timeout: 5000 },
+    codex: { cmd: 'agy', args: ['models'], timeout: 5000 }
+  }
+  const a = attempts[cli]
+  if (!a) return []
+  try {
+    const r = spawnSync(a.cmd, a.args, { encoding: 'utf8', timeout: a.timeout, stdio: ['ignore', 'pipe', 'pipe'] })
+    if (r.status !== 0) return []
+    const lines = (r.stdout || '').split('\n').map(l => l.trim()).filter(Boolean)
+    if (cli === 'ollama') {
+      return lines.filter(l => !/^NAME\b/i.test(l)).map(l => l.split(/\s+/)[0]).filter(Boolean)
+    }
+    if (cli === 'jcode') {
+      return lines.map(l => l.replace(/^~/, '').replace(/\[web\]$/, '').trim()).filter(Boolean)
+    }
+    return lines
+  } catch (e) {
+    return []
+  }
+}
+
+// Menú de elección del CLI backend (números). Devuelve el nombre o null (heredar default).
+async function chooseCliAsync(rl, cfg) {
+  const defCli = cfg.cli || 'jcode'
+  const installed = installedClis()
+  const missing = KNOWN_CLIS.filter(c => !installed.includes(c))
+  const names = [...new Set([defCli, ...installed])]   // el default siempre primero
+
+  console.log('\n  CLI backend:')
+  names.forEach((n, i) => console.log(`   ${i + 1}) ${n}${n === defCli ? ' (por defecto)' : ''}`))
+  if (missing.length) console.log(`   (no instalados: ${missing.join(', ')})`)
+
+  const ans = await new Promise(res => rl.question(`  Elige número (vacío = "${defCli}"): `, a => res((a || '').trim())))
+  if (!ans) return null
+  const n = Number(ans)
+  if (Number.isInteger(n) && n >= 1 && n <= names.length) return names[n - 1]
+  if (KNOWN_CLIS.includes(ans.toLowerCase())) return ans.toLowerCase()
+  console.log('  ✗ Elección no válida; se usará el default.')
+  return null
+}
+
+// Menú de modelos del CLI elegido. Devuelve el nombre o null (sin modelo).
+async function chooseModelAsync(rl, cli) {
+  const models = listModelsFor(cli)
+  if (!models.length) {
+    const m = await promptEmpty(rl, `Modelo (opcional; no se pudieron listar los de "${cli}")`)
+    return m || null
+  }
+  console.log(`\n  Modelos disponibles para "${cli}":`)
+  const MAX = 40
+  models.slice(0, MAX).forEach((m, i) => console.log(`   ${i + 1}) ${m}`))
+  if (models.length > MAX) console.log(`   ... y ${models.length - MAX} más (escribe el nombre directamente)`)
+  const ans = await new Promise(res => rl.question('  Elige número o escribe el modelo (vacío = sin modelo): ', a => res((a || '').trim())))
+  if (!ans) return null
+  const n = Number(ans)
+  if (Number.isInteger(n) && n >= 1 && n <= models.length) return models[n - 1]
+  return ans   // nombre literal de modelo
+}
+
+// Selección multi de agentes existentes + creación de nuevos en bucle.
+// Devuelve { chosen, created }: chosen = agentes a lanzar, created = nuevos (aún sin persistir).
+async function chooseAndCreateAsync(rl, cfg) {
+  const allAgents = (cfg.agents || []).slice()   // copia de trabajo (config + nuevos)
+  const created = []                              // agentes recién creados en esta sesión
+
+  while (true) {
+    console.log('\n  Agentes disponibles:')
+    allAgents.forEach((it, i) => console.log(`   ${i + 1}) ${it.name} (${it.role || '—'})`))
+
+    const answer = await new Promise(res => {
+      rl.question('  Elige números separados por coma (vacío = todos), "n" = crear nuevo: ', a => res((a || '').trim()))
+    })
+
+    // Crear un agente nuevo
+    if (/^n$/i.test(answer)) {
+      const agent = await createAgentAsync(rl, cfg)
+      if (agent) {
+        allAgents.push(agent)
+        created.push(agent)
+        console.log(`  ✓ Agente "${agent.name}" listo.`)
+      }
+      continue
+    }
+
+    // Vacío = lanzar todos
+    if (!answer) return { chosen: allAgents.slice(), created }
+
+    // Lista de números
+    const nums = answer.split(/[, ]+/).map(Number).filter(n => n >= 1 && n <= allAgents.length)
+    if (nums.length) return { chosen: nums.map(n => allAgents[n - 1]), created }
+
+    console.log('  ✗ Entrada no válida. Intenta de nuevo.')
+  }
+}
+
 function printHelp() {
   console.log(`
 walkie-fleet — Lanza una flota configurable de agentes Walkie desde config/agents.json
@@ -145,6 +414,10 @@ USO:
 COMANDOS:
   list                  Muestra el canal, CLI, primario y agentes configurados.
   validate              Valida config/agents.json (canal, nombres, prompts, duplicados, primario).
+  run | interactive     MODO INTERACTIVO: pregunta canal, secreto y qué agentes
+                          lanzar SIN editar el archivo de config (alias: go).
+                          Puedes también CREAR agentes nuevos (con su prompt) y
+                          guardarlos en config/agents.json desde el propio menú.
   start [--tmux]        Lanza todos los agentes de la config.
                           sin bandera: procesos en segundo plano (log: fleet.log)
                           --tmux:      cada agente en un panel tmux (sesión walkie-fleet)
@@ -196,6 +469,11 @@ switch (cmd) {
   case 'list': cmdList(loadConfig()); break
   case 'validate': cmdValidate(loadConfig()); break
   case 'start': cmdStart(loadConfig(), process.argv.includes('--tmux')); break
+  case 'run':
+  case 'interactive':
+  case 'go':
+    cmdRun()
+    break
   case 'single': {
     runOne(loadConfig(), process.argv[3], process.argv.includes('--tmux'))
     break

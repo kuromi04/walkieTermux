@@ -53,6 +53,7 @@ lee ese archivo y lanza los agentes por usted, sin hardcodear comandos en script
 |---------|----------|
 | `walkie-fleet list` | Muestra el canal, la CLI, el primario y los agentes configurados. |
 | `walkie-fleet validate` | Valida el JSON (canal, nombres, prompts, duplicados, primario). |
+| `walkie-fleet run` | Modo interactivo: pregunta canal, secreto y qué agentes lanzar **y además permite crear agentes nuevos** (nombre, rol, prompt, CLI, modelo) y guardarlos en la config. Elige el **CLI** de una lista de los más comunes y, al escogerlo, muestra sus **modelos disponibles** para seleccionar por número. |
 | `walkie-fleet start` | Lanza todos los agentes en segundo plano (registro en `fleet.log`). |
 | `walkie-fleet start --tmux` | Lanza cada agente en un panel tmux (sesión `walkie-fleet`). |
 | `walkie-fleet single <nombre>` | Lanza un único agente por nombre (útil para probar). |
