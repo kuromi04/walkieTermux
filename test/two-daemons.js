@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Copyright (c) 2026 kuromi04 · WalkieTermux. MIT License.
+// Copyright (c) 2026 kuromi04 · WalkieTermux. GPL-3.0 License.
 
 // Integration test: two walkie daemons on separate socket paths
 // simulating two agents on different machines

@@ -202,6 +202,6 @@ Los backends compatibles incluyen `jcode`, `codex`, `claude`, `ollama` y cualqui
 
 ## ⚖️ Licencia
 
-Licencia MIT · Copyright (c) 2026 **kuromi04** (fork basado en `walkie-sh` de vikasprogrammer).
+Licencia GPL-3.0 · Copyright (c) 2026 **kuromi04** (fork basado en `walkie-sh` de vikasprogrammer).
 
 💼 **¿Necesitas un desarrollo a medida?** Contáctame en Telegram: [@tiendastelegramademas](https://t.me/tiendastelegramademas)

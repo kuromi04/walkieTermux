@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copyright (c) 2026 kuromi04 · WalkieTermux. MIT License.
+# Copyright (c) 2026 kuromi04 · WalkieTermux. GPL-3.0 License.
 # Same-machine collaboration: two agents on the same daemon using WALKIE_ID.
 #
 # Both agents share a single daemon. Messages are routed locally without

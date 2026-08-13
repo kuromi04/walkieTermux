@@ -1,4 +1,4 @@
-// Copyright (c) 2026 kuromi04 · WalkieTermux. MIT License.
+// Copyright (c) 2026 kuromi04 · WalkieTermux. GPL-3.0 License.
 const net = require('net')
 const path = require('path')
 const os = require('os')

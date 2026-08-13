@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copyright (c) 2026 kuromi04 · WalkieTermux. MIT License.
+# Copyright (c) 2026 kuromi04 · WalkieTermux. GPL-3.0 License.
 # Delegate a task to a remote agent and wait for the result.
 #
 # Usage: ./delegated-task.sh <channel> <secret> "task to delegate" [timeout_seconds]

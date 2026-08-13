@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Copyright (c) 2026 kuromi04 · WalkieTermux. MIT License.
+// Copyright (c) 2026 kuromi04 · WalkieTermux. GPL-3.0 License.
 // Quick IPC helper: node ipc-send.js <socket-path> <json-command>
 const net = require('net')
 const sockPath = process.argv[2]

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copyright (c) 2026 kuromi04 · WalkieTermux. MIT License.
+# Copyright (c) 2026 kuromi04 · WalkieTermux. GPL-3.0 License.
 # Two-agent collaboration: coordinator sends a task, worker executes and reports back.
 #
 # For same-machine usage, set WALKIE_ID to give each agent a unique identity.

@@ -1,5 +1,5 @@
 #!/data/data/com.termux/files/usr/bin/env node
-// Copyright (c) 2026 kuromi04 · WalkieTermux. MIT License.
+// Copyright (c) 2026 kuromi04 · WalkieTermux. GPL-3.0 License.
 
 const { program } = require('commander')
 const { request, streamMessages } = require('../src/client')

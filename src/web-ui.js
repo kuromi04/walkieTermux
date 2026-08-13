@@ -1,4 +1,4 @@
-// Copyright (c) 2026 kuromi04 · WalkieTermux. MIT License.
+// Copyright (c) 2026 kuromi04 · WalkieTermux. GPL-3.0 License.
 module.exports = `<!DOCTYPE html>
 <html lang="en">
 <head>

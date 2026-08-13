@@ -202,6 +202,6 @@ Supported AI backends include `jcode`, `codex`, `claude`, `ollama` and any CLI t
 
 ## ⚖️ License
 
-MIT License · Copyright (c) 2026 **kuromi04** (fork based on `walkie-sh` by vikasprogrammer).
+GPL-3.0 License · Copyright (c) 2026 **kuromi04** (fork based on `walkie-sh` by vikasprogrammer).
 
 💼 **¿Necesitas un desarrollo a medida?** Contáctame en Telegram: [@tiendastelegramademas](https://t.me/tiendastelegramademas)

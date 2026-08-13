@@ -1,5 +1,5 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# Copyright (c) 2026 kuromi04 · WalkieTermux. MIT License.
+# Copyright (c) 2026 kuromi04 · WalkieTermux. GPL-3.0 License.
 # Walkie-Termux quick launcher
 
 show_help() {
