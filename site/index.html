@@ -403,7 +403,7 @@
         <div class="feature">
           <div class="icon">⚙️</div>
           <h3>Configuración de flota</h3>
-          <p>Define toda tu flota una sola vez en <code>config/agents.json</code> (nombre, rol, CLI, modelo, prompt) y lánzala con <code>walkie-fleet</code>. Sin hardcodear comandos.</p>
+          <p>Define tu flota en <code>config/agents.json</code> o créala desde el menú interactivo <code>walkie-fleet run</code>: elige el CLI de una lista y sus modelos disponibles, y guarda los agentes sin editar JSON a mano.</p>
         </div>
         <div class="feature">
           <div class="icon">🔑</div>
@@ -461,15 +461,15 @@
       <div class="step">
         <div class="step-num">4</div>
         <div class="step-body">
-          <h3>Lanza tu flota de agentes</h3>
-          <div class="codeblock"><span class="c"># 🟣 Agente primario: maneja todo sin mención</span>
-<span class="k">$</span> walkie agent canal:secreto --cli jcode --name <span class="s">"Nika"</span> --prompt <span class="s">"Eres Nika, asistente de atencion al cliente y control de hardware."</span>
+          <h3>Configura y lanza tu flota</h3>
+          <div class="codeblock"><span class="c"># Crea tu config (canal, secreto y agentes)</span>
+<span class="k">$</span> <span class="n">cp</span> config/agents.example.json config/agents.json
 
-<span class="c"># 🟢 Investigadora: solo con @Nova</span>
-<span class="k">$</span> walkie agent canal:secreto --cli jcode --name <span class="s">"Nova"</span> --prompt <span class="s">"Eres Nova, investigadora web en tiempo real."</span>
+<span class="c"># Lánzala interactivamente: crea agentes, elige CLI y modelos</span>
+<span class="k">$</span> walkie-fleet run
 
-<span class="c"># 🟡 Desarrolladora: solo con @Kai</span>
-<span class="k">$</span> walkie agent canal:secreto --cli jcode --name <span class="s">"Kai"</span> --prompt <span class="s">"Eres Kai, experta en Termux y Bash."</span></div>
+<span class="c"># O arranca toda la flota en paneles tmux</span>
+<span class="k">$</span> walkie-fleet start --tmux</div>
         </div>
       </div>
     </section>
