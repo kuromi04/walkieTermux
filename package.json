@@ -26,7 +26,8 @@
   "main": "./src/api.js",
   "bin": {
     "walkie": "./bin/walkie.js",
-    "walkie-fleet": "./bin/walkie-fleet"
+    "walkie-fleet": "./bin/walkie-fleet",
+    "walkie-whatsapp": "./bin/walkie-whatsapp.js"
   },
   "files": [
     "bin/",
@@ -42,8 +43,11 @@
     "node": ">=18"
   },
   "dependencies": {
+    "@whiskeysockets/baileys": "^6.6.0",
     "commander": "^12.0.0",
     "hyperswarm": "^4.0.0",
+    "pino": "^9.0.0",
+    "qrcode-terminal": "^0.12.0",
     "ws": "^8.0.0"
   }
 }

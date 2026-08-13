@@ -438,12 +438,12 @@ program
           // No mention: only primary agent (Nika) responds. Secondary agents stay silent.
           if (agentName !== 'Nika') return
         }
-        // Loop prevention: cap consecutive exchanges with the same sender (except for tg-bot bridge)
-        if (msg.from !== 'tg-bot' && msg.from !== 'telegram_bot' && msg.from === lastSender && consecutiveCount >= MAX_CONSECUTIVE) {
+        // Loop prevention: cap consecutive exchanges with the same sender (except for tg-bot / wa-bot bridges)
+        if (msg.from !== 'tg-bot' && msg.from !== 'telegram_bot' && msg.from !== 'wa-bot' && msg.from !== 'whatsapp_bot' && msg.from === lastSender && consecutiveCount >= MAX_CONSECUTIVE) {
           console.log(`\x1b[2m[paused] ${MAX_CONSECUTIVE} consecutive exchanges with ${msg.from} — waiting for someone else\x1b[0m`)
           return
         }
-        if (msg.from === 'tg-bot' || msg.from === 'telegram_bot') {
+        if (msg.from === 'tg-bot' || msg.from === 'telegram_bot' || msg.from === 'wa-bot' || msg.from === 'whatsapp_bot') {
           consecutiveCount = 0
         }
         queue.push(msg)

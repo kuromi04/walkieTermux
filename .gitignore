@@ -9,3 +9,7 @@ _archive/
 !/.env.example
 config/agents.json
 fleet.log
+
+# Sesión de WhatsApp (claves de autenticación Baileys)
+session_whatsapp/
+*.jstore
