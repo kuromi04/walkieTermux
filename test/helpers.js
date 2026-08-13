@@ -1,3 +1,4 @@
+// Copyright (c) 2026 kuromi04 · WalkieTermux. MIT License.
 const { spawn } = require('child_process')
 const net = require('net')
 const path = require('path')

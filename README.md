@@ -41,6 +41,8 @@ This repository documents a practical implementation of serverless, decentralize
 
 This setup and testing were carried out by **kuromi04**, focusing on resolving local loopback boundaries, mobile web UI responsiveness, package environment constraints in Android terminals, and coordinating multi-device connections.
 
+> 🏆 This is the **first project of its type**, built entirely from **Termux** by [kuromi04](https://github.com/kuromi04).
+
 ---
 
 ## 🛠️ Orchestration Notes (How it was solved)
@@ -199,4 +201,7 @@ Supported AI backends include `jcode`, `codex`, `claude`, `ollama` and any CLI t
 ---
 
 ## ⚖️ License
-MIT License.
+
+MIT License · Copyright (c) 2026 **kuromi04** (fork based on `walkie-sh` by vikasprogrammer).
+
+💼 **¿Necesitas un desarrollo a medida?** Contáctame en Telegram: [@tiendastelegramademas](https://t.me/tiendastelegramademas)

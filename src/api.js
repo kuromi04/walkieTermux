@@ -1,3 +1,4 @@
+// Copyright (c) 2026 kuromi04 · WalkieTermux. MIT License.
 /**
  * Programmatic API for walkie.
  *

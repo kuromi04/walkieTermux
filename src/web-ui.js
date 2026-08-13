@@ -1,3 +1,4 @@
+// Copyright (c) 2026 kuromi04 · WalkieTermux. MIT License.
 module.exports = `<!DOCTYPE html>
 <html lang="en">
 <head>

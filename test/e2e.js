@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Copyright (c) 2026 kuromi04 · WalkieTermux. MIT License.
 
 // End-to-end test: two daemons discover each other via Hyperswarm
 // and exchange messages over P2P

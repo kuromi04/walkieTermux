@@ -1,3 +1,4 @@
+// Copyright (c) 2026 kuromi04 · WalkieTermux. MIT License.
 const { describe, it, beforeEach, afterEach } = require('node:test')
 const assert = require('node:assert/strict')
 const os = require('os')

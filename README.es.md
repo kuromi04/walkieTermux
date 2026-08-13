@@ -41,6 +41,8 @@ Este repositorio documenta una implementación práctica de orquestación de age
 
 La configuración y pruebas fueron realizadas por **[kuromi04](https://github.com/kuromi04)**, enfocándose en resolver los límites del loopback local de Android, la adaptabilidad de la UI web móvil, las limitaciones del entorno de paquetes en terminales móviles y la coordinación de conexiones multidispositivo.
 
+> 🏆 Este es el **primer proyecto de este tipo**, construido íntegramente desde **Termux** por [kuromi04](https://github.com/kuromi04).
+
 ---
 
 ## 🛠️ Notas de Orquestación (Cómo se resolvió)
@@ -199,4 +201,7 @@ Los backends compatibles incluyen `jcode`, `codex`, `claude`, `ollama` y cualqui
 ---
 
 ## ⚖️ Licencia
-Licencia MIT.
+
+Licencia MIT · Copyright (c) 2026 **kuromi04** (fork basado en `walkie-sh` de vikasprogrammer).
+
+💼 **¿Necesitas un desarrollo a medida?** Contáctame en Telegram: [@tiendastelegramademas](https://t.me/tiendastelegramademas)

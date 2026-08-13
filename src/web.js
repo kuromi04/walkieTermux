@@ -1,3 +1,4 @@
+// Copyright (c) 2026 kuromi04 · WalkieTermux. MIT License.
 const http = require('http')
 const crypto = require('crypto')
 const fs = require('fs')

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 kuromi04 · WalkieTermux. MIT License.
 # Monitor agent activity on a channel.
 # Streams messages in real-time using walkie watch.
 #

@@ -1,3 +1,4 @@
+// Copyright (c) 2026 kuromi04 · WalkieTermux. MIT License.
 const Hyperswarm = require('hyperswarm')
 const net = require('net')
 const fs = require('fs')

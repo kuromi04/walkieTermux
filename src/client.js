@@ -1,3 +1,4 @@
+// Copyright (c) 2026 kuromi04 · WalkieTermux. MIT License.
 const net = require('net')
 const path = require('path')
 const os = require('os')

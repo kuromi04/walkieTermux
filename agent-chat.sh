@@ -1,4 +1,5 @@
 #!/data/data/com.termux/files/usr/bin/bash
+# Copyright (c) 2026 kuromi04 · WalkieTermux. MIT License.
 # Walkie-Termux quick launcher
 
 show_help() {
