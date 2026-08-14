@@ -38,9 +38,33 @@ async function run(channelArg, opts) {
   const cid = opts.name
 
   // --- 1) Conectar WhatsApp (Baileys) -------------------------------------
-  let sock
+  let sock = null
+  let lastRemoteJid = null
+
+  // Adjunta el manejador de mensajes entrantes. Se re-ejecuta en cada
+  // (re)conexión para enlazar el socket fresco a la variable "sock".
+  const attachInbound = (s) => {
+    sock = s
+    s.ev.on('messages.upsert', async (m) => {
+      try {
+        for (const msg of m.messages) {
+          if (!msg.message || msg.key.fromMe) continue
+          const remoteJid = msg.key.remoteJid
+          if (remoteJid === 'status@broadcast') continue
+          lastRemoteJid = remoteJid
+          const text = extractText(msg.message)
+          if (!text) continue
+          console.log(`\x1b[2m[WA→walkie]\x1b[0m ${remoteJid.split('@')[0]}: ${text.slice(0, 120)}`)
+          await request({ action: 'send', channel, message: text, clientId: cid })
+        }
+      } catch (e) {
+        console.error(`\x1b[31m[WA→walkie] Error:\x1b[0m ${e.message}`)
+      }
+    })
+  }
+
   try {
-    sock = await connectWhatsApp(opts.session, channel)
+    sock = await connectWhatsApp(opts.session, channel, attachInbound)
   } catch (e) {
     console.error(`\x1b[31m[WhatsApp] Error de conexión:\x1b[0m ${e.message}`)
     process.exit(1)
@@ -63,28 +87,7 @@ async function run(channelArg, opts) {
   console.log(`\x1b[2mLos mensajes de WhatsApp se enrutan por @mención como en walkie.\x1b[0m`)
   console.log(`\x1b[2mCtrl+C para salir.\x1b[0m\n`)
 
-  // Último chat de WhatsApp para responder (caso de uso personal/1:1).
-  let lastRemoteJid = null
-
-  // --- 3) WhatsApp → Walkie ------------------------------------------------
-  sock.ev.on('messages.upsert', async (m) => {
-    try {
-      for (const msg of m.messages) {
-        if (!msg.message || msg.key.fromMe) continue
-        const remoteJid = msg.key.remoteJid
-        if (remoteJid === 'status@broadcast') continue
-
-        lastRemoteJid = remoteJid
-        const text = extractText(msg.message)
-        if (!text) continue
-
-        console.log(`\x1b[2m[WA→walkie]\x1b[0m ${remoteJid.split('@')[0]}: ${text.slice(0, 120)}`)
-        await request({ action: 'send', channel, message: text, clientId: cid })
-      }
-    } catch (e) {
-      console.error(`\x1b[31m[WA→walkie] Error:\x1b[0m ${e.message}`)
-    }
-  })
+  // (El enrutamiento WhatsApp → Walkie se adjunta vía attachInbound arriba.)
 
   // --- 4) Walkie → WhatsApp ------------------------------------------------
   const abort = { aborted: false, socket: null }
@@ -126,7 +129,7 @@ async function run(channelArg, opts) {
 // ---------------------------------------------------------------------------
 // Conexión WhatsApp (refactorizada desde whatsapp-termux-connect)
 // ---------------------------------------------------------------------------
-async function connectWhatsApp(sessionDir, channel) {
+async function connectWhatsApp(sessionDir, channel, onOpen) {
   let baileys, pino
   try {
     baileys = require('@whiskeysockets/baileys')
@@ -169,13 +172,16 @@ async function connectWhatsApp(sessionDir, channel) {
       const debeReconectar = statusCode !== DisconnectReason.loggedOut
       console.log(`\x1b[31m[WhatsApp] Conexión cerrada (${statusCode}). Reconectando: ${debeReconectar}\x1b[0m`)
       if (debeReconectar) {
-        connectWhatsApp(sessionDir, channel).catch(() => {})
+        setTimeout(() => {
+          connectWhatsApp(sessionDir, channel, onOpen).catch(() => {})
+        }, 5000)
       } else {
         console.log(`\x1b[33m[WhatsApp] Sesión desvinculada. Borra "${sessionDir}" y vuelve a vincular.\x1b[0m`)
         process.exit(0)
       }
     } else if (connection === 'open') {
       console.log(`\x1b[32m🚀 WhatsApp conectado. Puente listo en #${channel}.\x1b[0m`)
+      if (onOpen) onOpen(sock)
     }
   })
 
