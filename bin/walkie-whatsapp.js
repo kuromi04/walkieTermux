@@ -23,6 +23,7 @@ program
   .option('--name <name>', 'Nombre del puente en el canal (default: wa-bot)', 'wa-bot')
   .option('--session <dir>', 'Carpeta de sesión de WhatsApp (default: session_whatsapp)', 'session_whatsapp')
   .option('--no-media', 'Desactiva el reenvío de fotos/audio (solo texto)')
+  .option('--pair <phone>', 'Vincular por código de emparejamiento (sin menú interactivo)')
   .action(async (channelArg, opts) => {
     await run(channelArg, opts)
   })
@@ -64,7 +65,7 @@ async function run(channelArg, opts) {
   }
 
   try {
-    sock = await connectWhatsApp(opts.session, channel, attachInbound)
+    sock = await connectWhatsApp(opts.session, channel, attachInbound, opts.pair)
   } catch (e) {
     console.error(`\x1b[31m[WhatsApp] Error de conexión:\x1b[0m ${e.message}`)
     process.exit(1)
@@ -129,7 +130,7 @@ async function run(channelArg, opts) {
 // ---------------------------------------------------------------------------
 // Conexión WhatsApp (refactorizada desde whatsapp-termux-connect)
 // ---------------------------------------------------------------------------
-async function connectWhatsApp(sessionDir, channel, onOpen) {
+async function connectWhatsApp(sessionDir, channel, onOpen, pairPhone) {
   let baileys, pino
   try {
     baileys = require('@whiskeysockets/baileys')
@@ -161,7 +162,7 @@ async function connectWhatsApp(sessionDir, channel, onOpen) {
 
   // Vincular si no está registrado
   if (!sock.authState.creds.registered) {
-    await pair(sock, channel)
+    await pair(sock, channel, pairPhone)
   }
 
   // Reintento automático ante desconexiones
@@ -189,15 +190,23 @@ async function connectWhatsApp(sessionDir, channel, onOpen) {
   return sock
 }
 
-async function pair(sock, channel) {
+async function pair(sock, channel, phone) {
   const qrcode = require('qrcode-terminal')
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
-  const question = (t) => new Promise((res) => rl.question(t, res))
 
   console.log('\n\x1b[1;36m==================================================')
   console.log('    WHATSAPP ⇄ WALKIE BRIDGE — VINCULACIÓN')
   console.log('==================================================\x1b[0m')
   console.log(` Canal P2P destino: #${channel}`)
+
+  // Modo no interactivo (--pair): salta el menú y pide el código directamente.
+  if (phone) {
+    await requestPairingCode(sock, phone)
+    return
+  }
+
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+  const question = (t) => new Promise((res) => rl.question(t, res))
+
   console.log(' Seleccione el método de vinculación:')
   console.log(' 1) Código QR (escanear con cámara)')
   console.log(' 2) Código de Emparejamiento (sin cámara)')
@@ -208,18 +217,7 @@ async function pair(sock, channel) {
   if (opcion === '2') {
     console.log('\n\x1b[1;33m[Vinculación por Código]\x1b[0m')
     const telefono = await question(' Número (con código de país, ej: 573001234567): ')
-    try {
-      const codigo = await sock.requestPairingCode(telefono.replace(/[^0-9]/g, ''))
-      console.log('\n\x1b[1;32m==================================================')
-      console.log(` 🔑 CÓDIGO DE VINCULACIÓN: ${codigo}`)
-      console.log('==================================================\x1b[0m')
-      console.log(' 1. WhatsApp > Dispositivos vinculados > Vincular un dispositivo.')
-      console.log(' 2. Seleccione "Vincular con el número de teléfono en su lugar".')
-      console.log(' 3. Ingrese el código mostrado arriba.\n')
-    } catch (err) {
-      console.error('\x1b[31m[ERROR] No se pudo solicitar el código:\x1b[0m', err.message)
-      process.exit(1)
-    }
+    await requestPairingCode(sock, telefono)
   } else {
     console.log('\n\x1b[1;34m[Vinculación por Código QR]\x1b[0m Generando QR...')
     sock.ev.on('connection.update', (update) => {
@@ -232,6 +230,44 @@ async function pair(sock, channel) {
   }
 
   rl.close()
+}
+
+// Solicita un código de emparejamiento y lo imprime. Compartido por el modo
+// interactivo (opción 2) y el modo no interactivo (--pair <phone>).
+async function requestPairingCode(sock, phone) {
+  try {
+    // Baileys cierra la conexión si se pide el código antes de que el socket
+    // termine el handshake. Esperamos el primer QR (señal de que ya conectó).
+    await waitForSocketReady(sock)
+    const codigo = await sock.requestPairingCode(String(phone).replace(/[^0-9]/g, ''))
+    console.log('\n\x1b[1;32m==================================================')
+    console.log(` 🔑 CÓDIGO DE VINCULACIÓN: ${codigo}`)
+    console.log('==================================================\x1b[0m')
+    console.log(' 1. WhatsApp > Dispositivos vinculados > Vincular un dispositivo.')
+    console.log(' 2. Seleccione "Vincular con el número de teléfono en su lugar".')
+    console.log(' 3. Ingrese el código mostrado arriba.\n')
+  } catch (err) {
+    console.error('\x1b[31m[ERROR] No se pudo solicitar el código:\x1b[0m', err.message)
+    process.exit(1)
+  }
+}
+
+// Resuelve cuando el socket emite su primer QR o pasa a "open" (ya conectado).
+function waitForSocketReady(sock) {
+  return new Promise((resolve) => {
+    const handler = (u) => {
+      if (u.qr || u.connection === 'open') {
+        sock.ev.off('connection.update', handler)
+        clearTimeout(timer)
+        resolve()
+      }
+    }
+    const timer = setTimeout(() => {
+      sock.ev.off('connection.update', handler)
+      resolve()
+    }, 30000)
+    sock.ev.on('connection.update', handler)
+  })
 }
 
 // ---------------------------------------------------------------------------
