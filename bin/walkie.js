@@ -798,12 +798,13 @@ program
   .command('web')
   .description('Start web-based chat UI')
   .option('-p, --port <port>', 'HTTP port', '3000')
+  .option('--host <host>', 'Bind address (default: 127.0.0.1). Use 0.0.0.0 only if you know the risk', '127.0.0.1')
   .option('-c, --channel <channels...>', 'Auto-join channels (format: channel:secret)')
   .option('--no-open', 'Do not open browser automatically')
   .action(async (opts) => {
     try {
       const { startWebServer } = require('../src/web')
-      const { port } = await startWebServer({ port: parseInt(opts.port, 10) })
+      const { port } = await startWebServer({ port: parseInt(opts.port, 10), host: opts.host })
       let url = `http://localhost:${port}`
       if (opts.channel && opts.channel.length > 0) {
         url += '?' + opts.channel.map(c => 'c=' + encodeURIComponent(c)).join('&')

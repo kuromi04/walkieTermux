@@ -246,7 +246,7 @@ class WebClient {
   }
 }
 
-function tryListen(server, port, maxAttempts = 10) {
+function tryListen(server, port, host, maxAttempts = 10) {
   return new Promise((resolve, reject) => {
     let attempts = 0
     const try_ = () => {
@@ -266,13 +266,13 @@ function tryListen(server, port, maxAttempts = 10) {
       }
       server.once('error', onError)
       server.once('listening', onListen)
-      server.listen(port)
+      server.listen(port, host)
     }
     try_()
   })
 }
 
-async function startWebServer({ port = 3000 } = {}) {
+async function startWebServer({ port = 3000, host = '127.0.0.1' } = {}) {
   await ensureDaemon()
 
   const server = http.createServer((req, res) => {
@@ -303,7 +303,7 @@ async function startWebServer({ port = 3000 } = {}) {
     }
   })
 
-  const actualPort = await tryListen(server, port)
+  const actualPort = await tryListen(server, port, host)
 
   const wss = new WebSocket.Server({ server, path: '/ws' })
 
