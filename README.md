@@ -31,6 +31,17 @@
 
 ---
 
+## 🚀 What's New in v1.6.0
+
+> **Browser control from the P2P network.** A new bridge puts Firefox under agent control: web research, form filling and screenshots, from the channel or the terminal.
+
+| Feature | Description |
+|---------|-------------|
+| **🌐 Browser Bridge** | `walkie-browser` + `walkie-browser-bridge.js` drive Firefox (firefox-agent-bridge v1.0.0): `navigate`, `getContent`, `fillForm`, `click`, `evaluate`, `screenshot`. See [`docs/BROWSER.md`](docs/BROWSER.md). |
+| **🤖 AI Model Stack** | Documented the full AI stack: `jcode`/`claude`/`codex`/`ollama` (LLM), Whisper (STT), Fish Audio + edge-tts (TTS). See [`docs/MODELOS.md`](docs/MODELOS.md). |
+
+---
+
 🌐 **[Leer este archivo en Español :spain:](./README.es.md)**
 
 ---
@@ -41,7 +52,9 @@ This repository documents a practical implementation of serverless, decentralize
 
 This setup and testing were carried out by **kuromi04**, focusing on resolving local loopback boundaries, mobile web UI responsiveness, package environment constraints in Android terminals, and coordinating multi-device connections.
 
-> 🏆 This is the **first project of its type**, built entirely from **Termux** by [kuromi04](https://github.com/kuromi04).
+> 🏆 **A milestone, done for the first time.** To the best of the author's knowledge, this is the **first documented case** of a complete, serverless **P2P AI-agent platform** — messaging bridges (WhatsApp + Telegram), multi-agent orchestration, voice (Whisper transcription + audio synthesis), per-client memory isolation, and full browser control (Firefox) — **built and run entirely from a single Android phone using Termux**.
+>
+> This is not a claim of perfection, but a record of persistence: every step was a problem solved on-device, with no servers and no cloud — Android loopback limits, the glibc/Bionic mismatch, mobile UI, per-conversation memory routing, multi-client WhatsApp handling, and the native browser bridge. If you know of prior work that did this first, the author welcomes the reference; sharing is how we all move forward.
 
 ---
 
@@ -177,6 +190,8 @@ Your `config/agents.json` and `.env` are **git-ignored**, so individual keys, pr
 | `walkie-fleet list` / `validate` / `single <n>` | Inspect, check, or run one agent |
 | `walkie web` | Launch the web dashboard (port 3000) |
 | `walkie daemon` | Start the P2P background daemon |
+| `walkie-browser <action> '<json>'` | Run a Firefox action (`navigate`, `fillForm`, `screenshot`…) |
+| `walkie-browser bridge <channel>` | Run a browser agent on the P2P channel |
 
 ### Agent CLI options (`--cli`)
 

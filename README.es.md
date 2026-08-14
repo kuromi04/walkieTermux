@@ -31,6 +31,17 @@
 
 ---
 
+## 🚀 Novedades en v1.6.0
+
+> **Control del navegador desde la red P2P.** Un nuevo puente pone Firefox bajo el control de los agentes: investigación web, relleno de formularios y capturas de pantalla, desde el canal o la terminal.
+
+| Característica | Descripción |
+|---|---|
+| **🌐 Puente de Navegador** | `walkie-browser` + `walkie-browser-bridge.js` controlan Firefox (firefox-agent-bridge v1.0.0): `navigate`, `getContent`, `fillForm`, `click`, `evaluate`, `screenshot`. Ver [`docs/BROWSER.md`](docs/BROWSER.md). |
+| **🤖 Modelos de IA** | Documentado el stack completo de IA: `jcode`/`claude`/`codex`/`ollama` (LLM), Whisper (STT), Fish Audio + edge-tts (TTS). Ver [`docs/MODELOS.md`](docs/MODELOS.md). |
+
+---
+
 🌐 **[Read this file in English :uk:](./README.md)**
 
 ---
@@ -41,7 +52,9 @@ Este repositorio documenta una implementación práctica de orquestación de age
 
 La configuración y pruebas fueron realizadas por **[kuromi04](https://github.com/kuromi04)**, enfocándose en resolver los límites del loopback local de Android, la adaptabilidad de la UI web móvil, las limitaciones del entorno de paquetes en terminales móviles y la coordinación de conexiones multidispositivo.
 
-> 🏆 Este es el **primer proyecto de este tipo**, construido íntegramente desde **Termux** por [kuromi04](https://github.com/kuromi04).
+> 🏆 **Un hito, hecho por primera vez.** Hasta donde el autor conoce, este es el **primer caso documentado** de una plataforma completa de agentes de IA **P2P sin servidor** — con puentes de mensajería (WhatsApp + Telegram), orquestación multi-agente, voz (transcripción con Whisper + síntesis de audio), memoria aislada por cliente y control total de un navegador (Firefox) — **construida y ejecutada íntegramente desde un solo teléfono Android con Termux**.
+>
+> No es una afirmación de perfección, sino un registro de perseverancia: cada paso fue un problema resuelto sobre el dispositivo, sin servidores y sin nube — los límites de loopback de Android, el desajuste glibc/Bionic, la UI móvil, el ruteo de memoria por conversación, la atención multi-cliente por WhatsApp y el puente nativo del navegador. Si conoces un trabajo previo que lo haya hecho antes, el autor agradece la referencia; compartir es la forma en que todos avanzamos.
 
 ---
 
@@ -177,6 +190,8 @@ Su `config/agents.json` y `.env` están en **.gitignore**, así que claves, prom
 | `walkie-fleet list` / `validate` / `single <n>` | Inspeccionar, comprobar o lanzar un agente |
 | `walkie web` | Lanzar el panel web (puerto 3000) |
 | `walkie daemon` | Iniciar el daemon P2P en segundo plano |
+| `walkie-browser <acción> '<json>'` | Ejecutar una acción de Firefox (`navigate`, `fillForm`, `screenshot`…) |
+| `walkie-browser bridge <canal>` | Ejecutar un agente de navegador en el canal P2P |
 
 ### Opciones del agente (`--cli`)
 
