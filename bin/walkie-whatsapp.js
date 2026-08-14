@@ -235,37 +235,29 @@ async function pair(sock, channel) {
 }
 
 // ---------------------------------------------------------------------------
-// Utilidades
+// Utilidades (puras, en src/whatsapp-utils.js para testeo)
 // ---------------------------------------------------------------------------
-function extractText(message) {
-  if (message.conversation) return message.conversation
-  if (message.extendedTextMessage && message.extendedTextMessage.text) return message.extendedTextMessage.text
-  if (message.imageMessage && message.imageMessage.caption) return message.imageMessage.caption
-  if (message.videoMessage && message.videoMessage.caption) return message.videoMessage.caption
-  if (message.documentMessage && message.documentMessage.caption) return message.documentMessage.caption
-  return null
-}
+const { extractText, parseMediaLine, isAudioFile } = require('../src/whatsapp-utils')
 
 async function deliverToWhatsApp(sock, jid, data, mediaEnabled) {
   const text = String(data)
 
   // Extraer rutas de media del estilo "photo:/ruta" o "file:/ruta"
-  const mediaLine = text.match(/^(photo|file):(\S+)$/m)
+  const mediaLine = parseMediaLine(text)
 
   if (mediaEnabled && mediaLine) {
-    const kind = mediaLine[1]
-    const filePath = mediaLine[2]
+    const { kind, filePath } = mediaLine
     const fs = require('fs')
     if (fs.existsSync(filePath)) {
       if (kind === 'photo') {
         await sock.sendMessage(jid, { image: { url: filePath }, caption: '' })
-      } else if (/\.(ogg|opus|mp3|m4a|aac|wav|flac)$/i.test(filePath)) {
+      } else if (isAudioFile(filePath)) {
         await sock.sendMessage(jid, { audio: { url: filePath }, mimetype: 'audio/ogg', ptt: true })
       } else {
         await sock.sendMessage(jid, { document: { url: filePath } })
       }
       // Si además hay texto extra, enviarlo
-      const rest = text.replace(mediaLine[0], '').trim()
+      const rest = text.replace(mediaLine.raw, '').trim()
       if (rest) await sock.sendMessage(jid, { text: rest })
       return
     }
