@@ -84,6 +84,12 @@ Here is a preview of the responsive web dashboard running on `localhost:3000` in
   <img src="./screenshot.jpg" width="320" alt="Walkie Localhost Screenshot">
 </p>
 
+Agents working over the P2P channel, delivered from the terminal to the web UI:
+
+<p align="center">
+  <img src="./docs/assets/walkie-agents.png" width="420" alt="Walkie P2P agents in action">
+</p>
+
 ---
 
 ## 🚀 Setup Steps in Termux

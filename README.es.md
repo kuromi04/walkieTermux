@@ -84,6 +84,12 @@ Aquí tienes una vista previa del panel web responsivo ejecutándose en `localho
   <img src="./screenshot.jpg" width="320" alt="Walkie Localhost Screenshot">
 </p>
 
+Agentes trabajando por el canal P2P, enviado desde la terminal a la web UI:
+
+<p align="center">
+  <img src="./docs/assets/walkie-agents.png" width="420" alt="Agentes P2P de Walkie en acción">
+</p>
+
 ---
 
 ## 🚀 Pasos de Configuración en Termux
