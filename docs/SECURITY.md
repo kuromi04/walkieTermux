@@ -68,23 +68,33 @@ ni datos personales antes de mantenerlo público.
 ## 🔧 Recomendaciones pendientes
 
 1. **Rotar el secreto del canal (recomendado).** El actual es débil y predecible
-   (y fue expuesto en el historial de git). Genera uno fuerte y único:
+   (y fue expuesto en el historial de git). Usa el script incluido, que genera
+   un secreto de 192 bits, respalda la config y (opcionalmente) reinicia los
+   puentes:
 
    ```bash
-   # genera un secreto aleatorio
-   openssl rand -hex 24
+   bin/walkie-rotate-secret                  # dry-run: muestra el plan
+   bin/walkie-rotate-secret --apply          # aplica la rotación (con backup)
+   bin/walkie-rotate-secret --apply --restart# aplica y reinicia WhatsApp + Telegram
    ```
 
-   Y actualízalo en `config/agents.json` (campo `channel`) y en los procesos que
-   arrancan los puentes (WhatsApp, navegador). Mantenlo **solo** en archivos
-   gitignorados.
+   Actualiza `config/agents.json` (campo `channel`) y
+   `~/.config/walkie-tg/config.json` (campo `secret`). Mantenlo **solo** en
+   archivos gitignorados.
 
 2. **Si expones la web UI a la LAN**, añade autenticación (token/túnel SSH)
    antes de usar `--host 0.0.0.0`.
 
-3. **Captura de pantalla del dispositivo** (para documentar la terminal) requiere
-   la app Termux:API y su permiso de *Screenshot*; `screencap` no está disponible
-   desde el shell de Termux sin privilegios.
+3. **Captura de pantalla del dispositivo.** `termux-screenshot` ya no existe en
+   termux-api (Android 10+ retiró el permiso *screencap* para apps sin root).
+   Alternativa que sí funciona: una terminal en el display X11 (Termux:X11) y
+   capturarla con ImageMagick:
+
+   ```bash
+   export DISPLAY=:0
+   xfce4-terminal --hold -x <script> &   # o xterm
+   import -window root captura.png       # o -window <id> para una sola ventana
+   ```
 
 ## 🔐 Privacidad de los mensajes
 

@@ -90,6 +90,12 @@ Agents working over the P2P channel, delivered from the terminal to the web UI:
   <img src="./docs/assets/walkie-agents.png" width="420" alt="Walkie P2P agents in action">
 </p>
 
+The fleet running live in a real Android terminal (Termux + X11), showing the P2P daemon and active channels:
+
+<p align="center">
+  <img src="./docs/assets/walkie-terminal.png" width="420" alt="walkieTermux agents in a real Android terminal">
+</p>
+
 ---
 
 ## 🚀 Setup Steps in Termux
@@ -198,6 +204,7 @@ Your `config/agents.json` and `.env` are **git-ignored**, so individual keys, pr
 | `walkie daemon` | Start the P2P background daemon |
 | `walkie-browser <action> '<json>'` | Run a Firefox action (`navigate`, `fillForm`, `screenshot`…) |
 | `walkie-browser bridge <channel>` | Run a browser agent on the P2P channel |
+| `walkie-rotate-secret [--apply] [--restart]` | Rotate the P2P channel secret (dry-run by default). See [`docs/SECURITY.md`](docs/SECURITY.md) |
 
 ### Agent CLI options (`--cli`)
 

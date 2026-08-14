@@ -8,6 +8,7 @@ _archive/
 .env.*
 !/.env.example
 config/agents.json
+config/agents.json.bak-*
 fleet.log
 
 # Sesión de WhatsApp (claves de autenticación Baileys)
