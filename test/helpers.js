@@ -11,7 +11,10 @@ function createTempDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'walkie-test-'))
 }
 
-function ipc(sockPath, cmd, timeout = 5000) {
+// Timeout generoso: el primer `join` espera a que Hyperswarm anuncie el topic
+// (discovery.flushed()), que puede tardar varios segundos en dispositivos con
+// carga (DHT bootstrap). Un timeout corto produce fallos intermitentes.
+function ipc(sockPath, cmd, timeout = 20000) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => { sock.destroy(); reject(new Error('ipc timeout')) }, timeout)
     const sock = net.connect(sockPath)
