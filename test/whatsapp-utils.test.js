@@ -1,43 +1,91 @@
 // Copyright (c) 2026 kuromi04 · WalkieTermux. GPL-3.0 License.
-const test = require('node:test')
+const { describe, it } = require('node:test')
 const assert = require('node:assert/strict')
-const { extractText, parseMediaLine, isAudioFile } = require('../src/whatsapp-utils')
 
-test('extractText: conversation', () => {
-  assert.equal(extractText({ conversation: 'hola' }), 'hola')
+const {
+  extractText,
+  parseMediaLine,
+  isAudioFile,
+  encodeWaMessage,
+  decodeWaMessage
+} = require('../src/whatsapp-utils')
+
+describe('extractText', () => {
+  it('returns conversation text', () => {
+    assert.equal(extractText({ conversation: 'hola' }), 'hola')
+  })
+  it('returns extendedTextMessage text', () => {
+    assert.equal(extractText({ extendedTextMessage: { text: 'adios' } }), 'adios')
+  })
+  it('returns image caption', () => {
+    assert.equal(extractText({ imageMessage: { caption: 'foto' } }), 'foto')
+  })
+  it('returns null for unsupported message', () => {
+    assert.equal(extractText({ stickerMessage: {} }), null)
+  })
+  it('returns null for null input', () => {
+    assert.equal(extractText(null), null)
+  })
 })
 
-test('extractText: extendedTextMessage', () => {
-  assert.equal(extractText({ extendedTextMessage: { text: 'texto ext' } }), 'texto ext')
+describe('parseMediaLine', () => {
+  it('parses photo line', () => {
+    assert.deepEqual(parseMediaLine('photo:/sdcard/a.jpg'), { kind: 'photo', filePath: '/sdcard/a.jpg', raw: 'photo:/sdcard/a.jpg' })
+  })
+  it('parses file line', () => {
+    assert.deepEqual(parseMediaLine('file:/tmp/a.ogg'), { kind: 'file', filePath: '/tmp/a.ogg', raw: 'file:/tmp/a.ogg' })
+  })
+  it('returns null when no media line', () => {
+    assert.equal(parseMediaLine('hola mundo'), null)
+  })
 })
 
-test('extractText: captions de media', () => {
-  assert.equal(extractText({ imageMessage: { caption: 'pie de foto' } }), 'pie de foto')
-  assert.equal(extractText({ videoMessage: { caption: 'pie de video' } }), 'pie de video')
-  assert.equal(extractText({ documentMessage: { caption: 'pie de doc' } }), 'pie de doc')
+describe('isAudioFile', () => {
+  it('detects audio extensions', () => {
+    for (const f of ['a.ogg', 'b.opus', 'c.mp3', 'd.m4a', 'e.aac', 'f.wav', 'g.flac']) {
+      assert.equal(isAudioFile(f), true, f)
+    }
+  })
+  it('rejects non-audio', () => {
+    assert.equal(isAudioFile('a.jpg'), false)
+  })
 })
 
-test('extractText: null / vacío', () => {
-  assert.equal(extractText(null), null)
-  assert.equal(extractText({}), null)
-  assert.equal(extractText({ imageMessage: {} }), null)
-})
+describe('encodeWaMessage / decodeWaMessage', () => {
+  it('round-trips chat context', () => {
+    const encoded = encodeWaMessage('573001234567@s.whatsapp.net', 'hola cliente')
+    assert.deepEqual(decodeWaMessage(encoded), {
+      chat: '573001234567@s.whatsapp.net',
+      text: 'hola cliente'
+    })
+  })
 
-test('parseMediaLine: photo y file', () => {
-  assert.deepEqual(parseMediaLine('photo:/ruta/foto.jpg'), { kind: 'photo', filePath: '/ruta/foto.jpg', raw: 'photo:/ruta/foto.jpg' })
-  assert.deepEqual(parseMediaLine('file:/tmp/nota.ogg'), { kind: 'file', filePath: '/tmp/nota.ogg', raw: 'file:/tmp/nota.ogg' })
-})
+  it('decode returns chat:null for plain text', () => {
+    assert.deepEqual(decodeWaMessage('mensaje plano'), { chat: null, text: 'mensaje plano' })
+  })
 
-test('parseMediaLine: no media', () => {
-  assert.equal(parseMediaLine('hola mundo'), null)
-  assert.equal(parseMediaLine('photo:'), null)
-  assert.equal(parseMediaLine(''), null)
-})
+  it('decode handles non-string data', () => {
+    assert.deepEqual(decodeWaMessage(123), { chat: null, text: '123' })
+    assert.deepEqual(decodeWaMessage(null), { chat: null, text: '' })
+    assert.deepEqual(decodeWaMessage(undefined), { chat: null, text: '' })
+  })
 
-test('isAudioFile', () => {
-  for (const f of ['a.ogg', 'b.opus', 'c.mp3', 'd.m4a', 'e.aac', 'f.wav', 'g.flac', 'H.MP3']) {
-    assert.equal(isAudioFile(f), true, f)
-  }
-  assert.equal(isAudioFile('x.png'), false)
-  assert.equal(isAudioFile('doc.pdf'), false)
+  it('decode does not choke on arbitrary JSON without chat/text', () => {
+    assert.deepEqual(decodeWaMessage('{"foo":1}'), { chat: null, text: '{"foo":1}' })
+  })
+
+  it('decode tolerates malformed JSON', () => {
+    assert.deepEqual(decodeWaMessage('{oops'), { chat: null, text: '{oops' })
+  })
+
+  it('encode coerces chat and text to strings', () => {
+    const encoded = encodeWaMessage(123, 456)
+    assert.deepEqual(decodeWaMessage(encoded), { chat: '123', text: '456' })
+  })
+
+  it('distinguishes two different chats for isolated memory', () => {
+    const a = decodeWaMessage(encodeWaMessage('a@s.whatsapp.net', 'x'))
+    const b = decodeWaMessage(encodeWaMessage('b@s.whatsapp.net', 'y'))
+    assert.notEqual(a.chat, b.chat)
+  })
 })

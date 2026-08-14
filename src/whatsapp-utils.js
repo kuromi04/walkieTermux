@@ -26,4 +26,28 @@ function isAudioFile(filePath) {
   return /\.(ogg|opus|mp3|m4a|aac|wav|flac)$/i.test(filePath)
 }
 
-module.exports = { extractText, parseMediaLine, isAudioFile }
+// Envuelve un mensaje con el identificador de su chat de origen (jid de
+// WhatsApp). Esto permite enrutar cada respuesta al chat correcto y mantener
+// memoria aislada por conversación en los agentes, incluso con varios
+// clientes hablando a la vez por el mismo canal.
+function encodeWaMessage(chat, text) {
+  return JSON.stringify({ chat: String(chat), text: String(text) })
+}
+
+// Desenvuelve un mensaje. Si trae contexto de chat devuelve { chat, text };
+// en caso contrario devuelve { chat: null, text: <original> } (compatibilidad
+// con mensajes planos previos).
+function decodeWaMessage(data) {
+  const raw = typeof data === 'string' ? data : (data == null ? '' : String(data))
+  if (raw.startsWith('{')) {
+    try {
+      const obj = JSON.parse(raw)
+      if (obj && typeof obj === 'object' && typeof obj.chat === 'string' && typeof obj.text === 'string') {
+        return { chat: obj.chat, text: obj.text }
+      }
+    } catch {}
+  }
+  return { chat: null, text: raw }
+}
+
+module.exports = { extractText, parseMediaLine, isAudioFile, encodeWaMessage, decodeWaMessage }

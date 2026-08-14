@@ -56,7 +56,7 @@ async function run(channelArg, opts) {
           const text = extractText(msg.message)
           if (!text) continue
           console.log(`\x1b[2m[WA→walkie]\x1b[0m ${remoteJid.split('@')[0]}: ${text.slice(0, 120)}`)
-          await request({ action: 'send', channel, message: text, clientId: cid })
+          await request({ action: 'send', channel, message: encodeWaMessage(remoteJid, text), clientId: cid })
         }
       } catch (e) {
         console.error(`\x1b[31m[WA→walkie] Error:\x1b[0m ${e.message}`)
@@ -98,15 +98,20 @@ async function run(channelArg, opts) {
     // No reenviar los propios mensajes ni los del sistema.
     if (msg.from === cid || msg.from === 'system') return
 
-    console.log(`\x1b[2m[walkie→WA]\x1b[0m ${msg.from}: ${String(msg.data).slice(0, 120)}`)
+    // Cada mensaje puede traer el chat de origen (envelope). Así las respuestas
+    // van al cliente correcto aunque haya varios hablando a la vez.
+    const { chat, text } = decodeWaMessage(msg.data)
+    const targetJid = chat || lastRemoteJid
 
-    if (!lastRemoteJid) {
+    console.log(`\x1b[2m[walkie→WA]\x1b[0m ${msg.from}${chat ? ` → ${chat.split('@')[0]}` : ''}: ${text.slice(0, 120)}`)
+
+    if (!targetJid) {
       console.log(`\x1b[2m  (sin chat de WhatsApp activo aún; esperando primer mensaje)\x1b[0m`)
       return
     }
 
     try {
-      await deliverToWhatsApp(sock, lastRemoteJid, msg.data, opts.media)
+      await deliverToWhatsApp(sock, targetJid, text, opts.media)
     } catch (e) {
       console.error(`\x1b[31m[walkie→WA] Error:\x1b[0m ${e.message}`)
     }
@@ -273,7 +278,7 @@ function waitForSocketReady(sock) {
 // ---------------------------------------------------------------------------
 // Utilidades (puras, en src/whatsapp-utils.js para testeo)
 // ---------------------------------------------------------------------------
-const { extractText, parseMediaLine, isAudioFile } = require('../src/whatsapp-utils')
+const { extractText, parseMediaLine, isAudioFile, encodeWaMessage, decodeWaMessage } = require('../src/whatsapp-utils')
 
 async function deliverToWhatsApp(sock, jid, data, mediaEnabled) {
   const text = String(data)
