@@ -1,0 +1,65 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# walkie-browser : controla Firefox (firefox-agent-bridge) y/o corre como puente
+# en un canal P2P de Walkie para que cualquier peer (o el agente Nika) maneje
+# el navegador desde el canal.
+#
+# Uso:
+#   walkie-browser <action> '<json params>'   -> comando directo al navegador
+#   walkie-browser bridge <canal[:secreto]>   -> arrancar como agente del canal
+#   walkie-browser help                       -> lista de acciones disponibles
+
+SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BRIDGE_JS="$SELF/walkie-browser-bridge.js"
+# Si no estamos dentro del repo (p.ej. symlink en .local/bin), buscar el bridge
+[ -f "$BRIDGE_JS" ] || BRIDGE_JS="${HOME}/walkieTermux/bin/walkie-browser-bridge.js"
+
+# Resolver el binario browser de firefox-agent-bridge
+BROWSER_BIN="$(command -v browser 2>/dev/null)"
+[ -z "$BROWSER_BIN" ] && BROWSER_BIN="${HOME}/.jcode/browser/browser"
+[ -x "$BROWSER_BIN" ] || BROWSER_BIN="browser"
+
+usage() {
+  echo "walkie-browser — controlar Firefox desde Walkie (firefox-agent-bridge)"
+  echo
+  echo "Uso:"
+  echo "  walkie-browser <action> '<json params>'   comando directo al navegador"
+  echo "  walkie-browser bridge <canal[:secreto]>   arrancar como agente del canal"
+  echo "  walkie-browser ping                       verificar conexión al navegador"
+  echo "  walkie-browser help                       esta ayuda"
+  echo
+  echo "Acciones principales:"
+  echo "  navigate url=...        ir a una URL"
+  echo "  getContent format=...   leer página (text|html|annotated)"
+  echo "  listTabs / newSession   gestionar pestañas"
+  echo "  click selector=...      hacer clic en un elemento"
+  echo "  type selector=...       escribir en un campo"
+  echo "  fillForm fields=[...]   llenar formularios"
+  echo "  evaluate script=...     ejecutar JavaScript en la página"
+  echo "  screenshot              capturar pantalla"
+  echo "  scout / preexplore      investigar un sitio web"
+  echo "  uploadFile / dropFile   subir/arrastrar archivos"
+  echo "  autoLogin domain=...    autocompletar login (bóveda Bitwarden)"
+  echo
+  echo "Ejemplos:"
+  echo "  walkie-browser navigate '{\"url\":\"https://example.com\"}'"
+  echo "  walkie-browser fillForm '{\"fields\":[{\"selector\":\"#email\",\"value\":\"a@b.c\"}]}'"
+  echo "  walkie-browser bridge canal-agentes:TU_SECRETO"
+}
+
+case "$1" in
+  ""|help|-h|--help)
+    usage
+    ;;
+  bridge)
+    shift
+    [ -n "$1" ] || { echo "uso: walkie-browser bridge <canal[:secreto]>"; exit 1; }
+    exec node "$BRIDGE_JS" "$@"
+    ;;
+  *)
+    [ -n "$1" ] || { usage; exit 1; }
+    ACTION="$1"; shift
+    PARAMS="${1:-}"
+    [ -n "$PARAMS" ] || PARAMS="{}"
+    exec "$BROWSER_BIN" "$ACTION" "$PARAMS"
+    ;;
+esac
