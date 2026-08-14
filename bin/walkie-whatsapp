@@ -1,0 +1,97 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# walkie-whatsapp — Puente WhatsApp ⇄ Walkie con configuración por defecto.
+#
+# Usa ~/.config/walkie-whatsapp/config.json para rellenar el canal, secreto,
+# nombre y sesión cuando no se pasan por línea de comandos.
+#
+# Config: ~/.config/walkie-whatsapp/config.json
+#   { "channel": "canal:secreto", "name": "wa-bot",
+#     "session": "session_whatsapp", "media": true }
+#
+# Variables de entorno:
+#   WALKIE_WA_CONFIG   Ruta alternativa al archivo de config.
+
+# Resolver la ruta real (seguir symlinks) del propio script
+SELF="$(readlink -f "$0" 2>/dev/null || echo "$0")"
+SELF_DIR="$(cd "$(dirname "$SELF")" && pwd)"
+SELF_JS="${WALKIE_WA_JS:-$SELF_DIR/walkie-whatsapp.js}"
+# Fallback si el JS no está junto al wrapper (p.ej. dentro del repo)
+[ -f "$SELF_JS" ] || SELF_JS="${HOME}/walkieTermux/bin/walkie-whatsapp.js"
+CONFIG="${WALKIE_WA_CONFIG:-$HOME/.config/walkie-whatsapp/config.json}"
+
+# Ayuda
+case "${1:-}" in
+  -h|--help|'')
+    echo "walkie-whatsapp — Puente WhatsApp ⇄ Walkie"
+    echo "Uso: walkie-whatsapp [canal:secreto] [opciones]"
+    echo "Si no das el canal, se usa el de ~/.config/walkie-whatsapp/config.json"
+    echo
+    echo "Opciones (todas las de walkie-whatsapp.js más):"
+    echo "  -h, --help    esta ayuda"
+    echo "  --dry-run     muestra el comando que se ejecutaría"
+    "${SELF_JS:-replaceme}" --help 2>/dev/null
+    exit 0
+    ;;
+esac
+
+# --- Cargar config (con parseo JSON seguro vía node) ---
+conf_channel=""
+conf_name=""
+conf_session=""
+conf_media="true"
+if [ -f "$CONFIG" ]; then
+  eval "$(node -e '
+    const fs=require("fs");
+    try{
+      const c=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));
+      const esc=s=>`"${String(s||"").replace(/[\\"]/g,"\\$&")}"`;
+      console.log(`conf_channel=${esc(c.channel||"")}`);
+      console.log(`conf_name=${esc(c.name||"")}`);
+      console.log(`conf_session=${esc(c.session||"")}`);
+      console.log(`conf_media=${c.media===false?"false":"true"}`);
+    }catch(e){}
+  ' "$CONFIG")"
+fi
+
+# --- Separar argumentos ---
+channel_arg=""
+rest=()
+for a in "$@"; do
+  case "$a" in
+    -*) rest+=("$a") ;;
+    *) [ -z "$channel_arg" ] && channel_arg="$a" || rest+=("$a") ;;
+  esac
+done
+
+# Canal: del argumento o de la config
+[ -n "$channel_arg" ] || channel_arg="$conf_channel"
+if [ -z "$channel_arg" ]; then
+  echo "Error: falta el canal (formato canal:secreto) o defínelo en $CONFIG" >&2
+  exit 1
+fi
+
+# Construir comando
+cmd=(node "$SELF_JS" "$channel_arg")
+
+# --name
+if ! printf '%s\n' "${rest[@]}" | grep -q -- '--name' && [ -n "$conf_name" ]; then
+  cmd+=(--name "$conf_name")
+fi
+# --session
+if ! printf '%s\n' "${rest[@]}" | grep -q -- '--session' && [ -n "$conf_session" ]; then
+  cmd+=(--session "$conf_session")
+fi
+# --no-media
+if [ "$conf_media" = "false" ] && ! printf '%s\n' "${rest[@]}" | grep -q -- '--no-media'; then
+  cmd+=(--no-media)
+fi
+
+cmd+=("${rest[@]}")
+
+# Mostrar si --dry-run
+if printf '%s\n' "${rest[@]}" | grep -q -- '--dry-run'; then
+  echo "# ${cmd[*]}"
+  exit 0
+fi
+
+exec "${cmd[@]}"
