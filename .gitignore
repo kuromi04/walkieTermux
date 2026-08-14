@@ -13,3 +13,6 @@ fleet.log
 # Sesión de WhatsApp (claves de autenticación Baileys)
 session_whatsapp/
 *.jstore
+
+# Material temporal de presentación (no subir a GitHub)
+presentacion-walkieTermux/
