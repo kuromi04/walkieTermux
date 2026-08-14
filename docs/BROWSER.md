@@ -66,6 +66,18 @@ La investigación web nativa del agente (sin navegador) usa `websearch` y `webfe
 3. **Captura**: `screenshot` guardó el PNG como evidencia visual.
 4. **Agente P2P**: un peer envió `browser ping` al canal → el agente respondió `[browser] ✅ ping`.
 
+## Capturas reales
+
+Flujo en vivo del puente controlado por el agente (datos de prueba, sin información sensible):
+
+**Investigación web** — extracción de contenido desde Wikipedia:
+
+![Investigación con walkie-browser](assets/browser-research.png)
+
+**Relleno de formulario** — `fillForm` escribiendo valores en w3schools:
+
+![Formulario rellenado con walkie-browser](assets/browser-form.png)
+
 ## Notas técnicas
 
 - El wrapper evita el bug de `PARAMS="${1:-{}}"` (añadía una `}` extra al JSON).
