@@ -197,6 +197,15 @@ async function connectWhatsApp(sessionDir, channel, onOpen, pairPhone) {
 
 async function pair(sock, channel, phone) {
   const qrcode = require('qrcode-terminal')
+  let latestQr = null
+
+  // Baileys puede emitir el QR muy rápido, incluso antes de que el usuario
+  // termine de escoger una opción. Escuchamos desde el inicio y cacheamos el
+  // último QR para no perderlo en Termux.
+  const qrListener = (update) => {
+    if (update.qr) latestQr = update.qr
+  }
+  sock.ev.on('connection.update', qrListener)
 
   console.log('\n\x1b[1;36m==================================================')
   console.log('    WHATSAPP ⇄ WALKIE BRIDGE — VINCULACIÓN')
@@ -205,7 +214,7 @@ async function pair(sock, channel, phone) {
 
   // Modo no interactivo (--pair): salta el menú y pide el código directamente.
   if (phone) {
-    await requestPairingCode(sock, phone)
+    await requestPairingCode(sock, phone, qrListener)
     return
   }
 
@@ -222,15 +231,19 @@ async function pair(sock, channel, phone) {
   if (opcion === '2') {
     console.log('\n\x1b[1;33m[Vinculación por Código]\x1b[0m')
     const telefono = await question(' Número (con código de país, ej: 573001234567): ')
-    await requestPairingCode(sock, telefono)
+    await requestPairingCode(sock, telefono, qrListener)
   } else {
-    console.log('\n\x1b[1;34m[Vinculación por Código QR]\x1b[0m Generando QR...')
+    console.log('\n\x1b[1;34m[Vinculación por Código QR]\x1b[0m')
+    let printedQr = null
+    const printQr = (qr) => {
+      printedQr = qr
+      qrcode.generate(qr, { small: true })
+      console.log(' Escanea el QR de arriba. Si expira, se imprimirá otro automáticamente.')
+    }
+    if (latestQr) printQr(latestQr)
+    else console.log(' Generando QR...')
     sock.ev.on('connection.update', (update) => {
-      const { qr } = update
-      if (qr) {
-        qrcode.generate(qr, { small: true })
-        console.log(' Escanea el QR de arriba.')
-      }
+      if (update.qr && update.qr !== printedQr) printQr(update.qr)
     })
   }
 
@@ -239,11 +252,12 @@ async function pair(sock, channel, phone) {
 
 // Solicita un código de emparejamiento y lo imprime. Compartido por el modo
 // interactivo (opción 2) y el modo no interactivo (--pair <phone>).
-async function requestPairingCode(sock, phone) {
+async function requestPairingCode(sock, phone, qrListener) {
   try {
     // Baileys cierra la conexión si se pide el código antes de que el socket
     // termine el handshake. Esperamos el primer QR (señal de que ya conectó).
     await waitForSocketReady(sock)
+    if (qrListener) sock.ev.off('connection.update', qrListener)
     const codigo = await sock.requestPairingCode(String(phone).replace(/[^0-9]/g, ''))
     console.log('\n\x1b[1;32m==================================================')
     console.log(` 🔑 CÓDIGO DE VINCULACIÓN: ${codigo}`)
@@ -270,7 +284,7 @@ function waitForSocketReady(sock) {
     const timer = setTimeout(() => {
       sock.ev.off('connection.update', handler)
       resolve()
-    }, 30000)
+    }, 5000)
     sock.ev.on('connection.update', handler)
   })
 }
