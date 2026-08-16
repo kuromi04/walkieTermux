@@ -85,7 +85,7 @@ async function run(channelArg, opts) {
 
   console.log(`\x1b[1m--- walkie-whatsapp: #${channel} ---\x1b[0m`)
   console.log(`\x1b[2mPuente "${cid}" activo. WhatsApp ⇄ Walkie.\x1b[0m`)
-  console.log(`\x1b[2mLos mensajes de WhatsApp se enrutan por @mención como en walkie.\x1b[0m`)
+  console.log(`\x1b[2mCada chat de WhatsApp es una conversación aislada (memoria propia); respuestas por @mención.\x1b[0m`)
   console.log(`\x1b[2mCtrl+C para salir.\x1b[0m\n`)
 
   // (El enrutamiento WhatsApp → Walkie se adjunta vía attachInbound arriba.)
@@ -98,17 +98,18 @@ async function run(channelArg, opts) {
     // No reenviar los propios mensajes ni los del sistema.
     if (msg.from === cid || msg.from === 'system') return
 
-    // Cada mensaje puede traer el chat de origen (envelope). Así las respuestas
-    // van al cliente correcto aunque haya varios hablando a la vez.
+    // Separación de chats: cada conversación de WhatsApp es independiente.
+    // Solo reenviamos a WhatsApp los mensajes que llevan envelope de chat
+    // (respuestas de los agentes a una conversación de WhatsApp). Los mensajes
+    // planos (origen Telegram/walkie) NO deben salir por WhatsApp.
     const { chat, text } = decodeWaMessage(msg.data)
-    const targetJid = chat || lastRemoteJid
-
-    console.log(`\x1b[2m[walkie→WA]\x1b[0m ${msg.from}${chat ? ` → ${chat.split('@')[0]}` : ''}: ${text.slice(0, 120)}`)
-
-    if (!targetJid) {
-      console.log(`\x1b[2m  (sin chat de WhatsApp activo aún; esperando primer mensaje)\x1b[0m`)
+    if (!chat) {
+      console.log(`\x1b[2m[walkie→WA]\x1b[0m ${msg.from}: mensaje sin chat de origen (no WhatsApp); se omite.\x1b[0m`)
       return
     }
+
+    const targetJid = chat
+    console.log(`\x1b[2m[walkie→WA]\x1b[0m ${msg.from} → ${chat.split('@')[0]}: ${text.slice(0, 120)}`)
 
     try {
       await deliverToWhatsApp(sock, targetJid, text, opts.media)
