@@ -1,0 +1,54 @@
+name: Bug report
+description: Reporta un fallo o mal funcionamiento de WalkieTermux
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por reportar. Rellena lo que puedas; cada detalle ayuda.
+  - type: textarea
+    id: descripcion
+    attributes:
+      label: Descripción
+      description: Qué ocurre y qué esperabas que ocurriera.
+    validations:
+      required: true
+  - type: textarea
+    id: pasos
+    attributes:
+      label: Pasos para reproducir
+      placeholder: |
+        1. Corre `walkie chat canal`
+        2. Envía ...
+        3. Se rompe ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Versión
+      description: Versión de walkie-termux (`walkie --version`) y de Node (`node -v`)
+      placeholder: ej. 1.5.0 / v20.11.0
+    validations:
+      required: true
+  - type: dropdown
+    id: entorno
+    attributes:
+      label: Entorno
+      description: Dónde ejecutas WalkieTermux
+      options:
+        - Termux (Android)
+        - Linux
+        - macOS
+        - WSL
+        - Otro
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / salida
+      description: Pega aquí la salida relevante o el traceback.
+    validations:
+      required: false

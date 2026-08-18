@@ -1,0 +1,43 @@
+name: Feature request
+description: Propón una funcionalidad o mejora para WalkieTermux
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe con claridad el problema que resuelve tu propuesta.
+  - type: textarea
+    id: problema
+    attributes:
+      label: Problema / necesidad
+      description: Qué no puedes hacer hoy o qué te incomoda.
+    validations:
+      required: true
+  - type: textarea
+    id: solucion
+    attributes:
+      label: Solución propuesta
+      description: Cómo imaginas la funcionalidad.
+    validations:
+      required: true
+  - type: textarea
+    id: alternativas
+    attributes:
+      label: Alternativas consideradas
+      description: Otras opciones que hayas probado o pensado.
+    validations:
+      required: false
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Alcance
+      options:
+        - label: CLI / P2P central
+        - label: Bridge Telegram
+        - label: Bridge WhatsApp
+        - label: Navegador / X11
+        - label: TTS / voz
+        - label: Documentación
+    validations:
+      required: false

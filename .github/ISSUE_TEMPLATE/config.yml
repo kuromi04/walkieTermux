@@ -1,0 +1,9 @@
+---
+blank_issues_enabled: false
+contact_links:
+  - name: Sitio web
+    url: https://kuromi04.github.io/walkieTermux/
+    about: Documentación y guía de comandos.
+  - name: Seguridad
+    url: https://github.com/kuromi04/walkieTermux/security/advisories
+    about: Para reportar vulnerabilidades, reporta un advisory privado en GitHub.
