@@ -191,6 +191,87 @@ Your `config/agents.json` and `.env` are **git-ignored**, so individual keys, pr
 
 ---
 
+## 🟢 WhatsApp Bridge
+
+Talk to your agent fleet (Nika, Nova, Kai) directly from **WhatsApp** — serverless,
+powered by [Baileys](https://github.com/whiskeysockets/baileys) inside Termux.
+
+```
+ WhatsApp  ──(message w/ chat)──▶  walkie P2P channel  ──▶  agents (@mention)
+ agents    ──(reply w/ chat)──▶  walkie P2P channel  ──▶  WhatsApp (text / photo / audio)
+```
+
+### Usage
+
+```bash
+# 1. Launch your fleet (if not already up)
+walkie-fleet start --tmux        # or:  walkie-team
+
+# 2. Start the WhatsApp bridge (persistent runit service)
+sv restart walkie-whatsapp
+#    or manually:  walkie-whatsapp walkie-fleet:YOUR_SECRET
+#    └── use the SAME channel:secret as config/agents.json
+```
+
+On first run the bridge asks you to link WhatsApp:
+
+1. **Pairing code** (option `2`, recommended on Termux): enter your number with
+   country code (e.g. `573001234567`), then in WhatsApp mobile:
+   *Settings → Linked devices → Link a device → Link with phone number instead*,
+   and type the code the bridge prints.
+2. **QR code** (option `1`): scan the QR shown in the terminal.
+
+The session is saved to `~/session_whatsapp/` (**do not** share it or commit it).
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `--name <n>` | Bridge name on the channel (default: `wa-bot`). |
+| `--session <dir>` | WhatsApp session folder (default: `session_whatsapp`). |
+| `--secret <s>` | Channel secret (if not included in `channel:secret`). |
+| `--no-media` | Disable photo/audio forwarding; text only. |
+
+### @-mention routing
+
+| Message you send on WhatsApp | Who answers |
+|------------------------------|-------------|
+| `turn on the flashlight` (no @) | Only **Nika** (primary) |
+| `@Nova what's the weather?`      | Only **Nova** |
+| `@Kai give me a script`          | Only **Kai** |
+
+### Per-chat isolation (behaves like real WhatsApp)
+
+Each contact has its **own isolated conversation**:
+
+- The bridge wraps each message as `{"chat": <jid>, "text": <text>}` with the sender's JID.
+- The agent keeps **independent memory per contact** (an isolated session per JID), so
+  context is never mixed between clients.
+- The reply is re-wrapped with the **same JID**, so it always returns to the right contact.
+- **Cross-platform isolation**: WhatsApp conversations are **not** forwarded to Telegram
+  and Telegram chats do **not** go out to WhatsApp.
+
+### Media (photo & voice)
+
+- If the agent replies with `photo:/path.jpg` or `file:/path/voice.ogg`, the bridge sends
+  the real image or voice note to WhatsApp.
+- Incoming voice notes are delivered as audio; for transcription of incoming voice use the
+  agent's Whisper logic (`walkie agent`).
+
+### Running in background
+
+```bash
+sv status walkie-whatsapp        # status
+sv restart walkie-whatsapp       # restart after code/config changes
+sv down walkie-whatsapp          # stop
+sv up walkie-whatsapp            # resume
+tail -f ~/.config/walkie-whatsapp/walkie-whatsapp.log   # logs
+```
+
+Full guide: [`docs/WHATSAPP.md`](docs/WHATSAPP.md)
+
+---
+
 ## 🧠 Command Reference
 
 | Command | Purpose |
@@ -204,6 +285,7 @@ Your `config/agents.json` and `.env` are **git-ignored**, so individual keys, pr
 | `walkie daemon` | Start the P2P background daemon |
 | `walkie-browser <action> '<json>'` | Run a Firefox action (`navigate`, `fillForm`, `screenshot`…) |
 | `walkie-browser bridge <channel>` | Run a browser agent on the P2P channel |
+| `walkie-whatsapp <channel:secret>` | WhatsApp ⇄ walkie bridge (runit: `walkie-whatsapp`) |
 | `walkie-rotate-secret [--apply] [--restart]` | Rotate the P2P channel secret (dry-run by default). See [`docs/SECURITY.md`](docs/SECURITY.md) |
 
 ### Agent CLI options (`--cli`)

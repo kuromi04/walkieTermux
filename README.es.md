@@ -191,6 +191,87 @@ Su `config/agents.json` y `.env` están en **.gitignore**, así que claves, prom
 
 ---
 
+## 🟢 Puente de WhatsApp
+
+Habla con tu flota de agentes (Nika, Nova, Kai) directamente desde **WhatsApp**, sin
+servidores, usando [Baileys](https://github.com/whiskeysockets/baileys) dentro de Termux.
+
+```
+ WhatsApp  ──(mensaje con chat)──▶  canal P2P walkie  ──▶  agentes (@mención)
+ agentes   ──(respuesta con chat)─▶  canal P2P walkie  ──▶  WhatsApp (texto / foto / audio)
+```
+
+### Uso
+
+```bash
+# 1. Lanza tu flota (si aún no está arriba)
+walkie-fleet start --tmux        # o:  walkie-team
+
+# 2. Levanta el puente de WhatsApp (servicio persistente runit)
+sv restart walkie-whatsapp
+#    o manualmente:  walkie-whatsapp walkie-fleet:TU_SECRETO
+#    └── usa el MISMO canal:secreto que config/agents.json
+```
+
+En el primer arranque el puente pedirá vincular WhatsApp:
+
+1. **Código de Emparejamiento** (opción `2`, recomendado en Termux): ingresa tu número
+   con código de país (ej. `573001234567`) y en WhatsApp móvil:
+   *Dispositivos vinculados → Vincular un dispositivo → Vincular con el número de
+   teléfono en su lugar*, e ingresa el código que imprime el puente.
+2. **Código QR** (opción `1`): escanea el QR que aparece en la terminal.
+
+La sesión queda guardada en `~/session_whatsapp/` (**no la compartas ni la subas a git**).
+
+### Opciones
+
+| Opción | Descripción |
+|--------|-------------|
+| `--name <n>` | Nombre del puente en el canal (default: `wa-bot`). |
+| `--session <dir>` | Carpeta de sesión de WhatsApp (default: `session_whatsapp`). |
+| `--secret <s>` | Secreto del canal (si no lo incluyes en `canal:secreto`). |
+| `--no-media` | Desactiva el reenvío de fotos/audio; solo texto. |
+
+### Ruteo por @mención
+
+| Mensaje que envías por WhatsApp | Quién responde |
+|---------------------------------|----------------|
+| `prende la linterna` (sin @)    | Solo **Nika** (primaria) |
+| `@Nova ¿qué tiempo hace?`       | Solo **Nova** |
+| `@Kai dame un script`           | Solo **Kai** |
+
+### Separación de chats (funciona como un WhatsApp real)
+
+Cada contacto tiene su **propia conversación aislada**:
+
+- El puente envuelve cada mensaje como `{"chat": <jid>, "text": <texto>}` con el JID del remitente.
+- El agente mantiene **memoria independiente por contacto** (una sesión aislada por JID),
+  así no mezcla el contexto entre clientes.
+- La respuesta se re-envuelve con el **mismo JID**, por lo que vuelve SIEMPRE al contacto correcto.
+- **Aislamiento entre plataformas**: las conversaciones de WhatsApp no se reenvían a Telegram
+  y las de Telegram no salen por WhatsApp.
+
+### Multimedia (foto y voz)
+
+- Si el agente responde con `photo:/ruta.jpg` o `file:/ruta/voice.ogg`, el puente envía
+  la imagen o la nota de voz real a WhatsApp.
+- Notas de voz entrantes: Baileys las entrega como audio; para transcripción de voz entrante
+  usa la lógica Whisper del agente (`walkie agent`).
+
+### Mantenerlo corriendo en segundo plano
+
+```bash
+sv status walkie-whatsapp        # estado
+sv restart walkie-whatsapp       # reiniciar tras editar código/config
+sv down walkie-whatsapp          # detener
+sv up walkie-whatsapp            # reanudar
+tail -f ~/.config/walkie-whatsapp/walkie-whatsapp.log   # logs
+```
+
+Guía completa: [`docs/WHATSAPP.md`](docs/WHATSAPP.md)
+
+---
+
 ## 🧠 Referencia de Comandos
 
 | Comando | Propósito |
@@ -204,6 +285,7 @@ Su `config/agents.json` y `.env` están en **.gitignore**, así que claves, prom
 | `walkie daemon` | Iniciar el daemon P2P en segundo plano |
 | `walkie-browser <acción> '<json>'` | Ejecutar una acción de Firefox (`navigate`, `fillForm`, `screenshot`…) |
 | `walkie-browser bridge <canal>` | Ejecutar un agente de navegador en el canal P2P |
+| `walkie-whatsapp <canal:secreto>` | Puente WhatsApp ⇄ walkie (runit: `walkie-whatsapp`) |
 | `walkie-rotate-secret [--apply] [--restart]` | Rota el secreto del canal P2P (dry-run por defecto). Ver [`docs/SECURITY.md`](docs/SECURITY.md) |
 
 ### Opciones del agente (`--cli`)
