@@ -1,0 +1,16 @@
+#!/data/data/com.termux/files/usr/bin/env bash
+# Copyright (c) 2026 kuromi04 · WalkieTermux. GPL-3.0 License.
+# walkie-hive-gui - Lanza la interfaz gráfica de Munder Difflin en tu X11 de Termux usando Debian proot
+
+# Asegurarse de heredar o establecer la variable DISPLAY
+if [ -z "$DISPLAY" ]; then
+  export DISPLAY=:0
+fi
+
+echo "🚀 Iniciando Munder Difflin GUI en el display $DISPLAY..."
+echo "Nota: Requiere que tengas Termux:X11 o un servidor X11 activo en tu dispositivo Android."
+echo "Para cerrar, presiona Ctrl+C en esta terminal."
+echo ""
+
+# Ejecutar fluxbox (gestor de ventanas) y luego npm run dev dentro de Debian proot
+proot-distro login debian --env DISPLAY="$DISPLAY" --env ELECTRON_FLAGS="--no-sandbox --disable-gpu" -- bash -c "pgrep -x fluxbox >/dev/null || (fluxbox & sleep 1) && cd /data/data/com.termux/files/home/munder-difflin && npm run dev -- --noSandbox"

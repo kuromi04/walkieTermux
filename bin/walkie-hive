@@ -1,0 +1,741 @@
+#!/data/data/com.termux/files/usr/bin/env node
+// Copyright (c) 2026 kuromi04 · WalkieTermux. GPL-3.0 License.
+// walkie-hive - Orquestación de Agentes de IA basada en carpetas (Munder Difflin Hive Protocol)
+//
+// Uso:
+//   walkie-hive init                # Inicializa la estructura del Hive
+//   walkie-hive status              # Muestra el estado del Hive, tareas y mensajes
+//   walkie-hive add-task <t> <d>    # Añade una nueva tarea y notifica al agente God (Nika)
+//   walkie-hive router              # Ejecuta el enrutador de mensajes en bucle (outbox -> inbox)
+//   walkie-hive agent <name>        # Ejecuta el bucle de un agente específico (procesa inbox)
+//   walkie-hive start               # Lanza el router y todos los agentes en un bucle secuencial
+//   walkie-hive start --tmux        # Lanza el router y agentes en paneles de Tmux paralelos
+
+const fs = require('fs');
+const path = require('path');
+const { spawnSync } = require('child_process');
+
+const REPO_DIR = path.resolve(__dirname, '..');
+const HIVE_DIR = path.join(REPO_DIR, 'hive');
+const CONFIG_FILE = path.join(REPO_DIR, 'config', 'agents.json');
+
+const PROTOCOL_MD = `# Hive protocol
+
+You are one of several agents sharing this hive. Coordination is entirely
+file-based; the harness (main process) is the only thing that runs git and the
+only thing that moves messages between agents.
+
+## Your workspace — \`agents/<your-id>/\`
+- \`identity.md\`  — who you are (read-only; the harness writes it).
+- \`memory.md\`    — your long-term memory. Read at the start of a task; append/overwrite it as you learn.
+- \`inbox/\`       — messages addressed to you. Read them at the start of a task.
+- \`inbox/.done/\` — move a message here once you've handled it.
+- \`outbox/\`      — drop messages here to send them. The harness delivers them.
+
+**Never write into another agent's folder.** Write to your own \`outbox/\`; the router delivers it. This keeps every file single-writer.
+
+## Sending a message
+Write one JSON file into \`outbox/\` (any filename ending in \`.json\`):
+
+\`\`\`json
+{
+  "to": "<agent-id> | god | broadcast",
+  "act": "request | inform | propose | query | agree | refuse | done",
+  "subject": "one-line summary",
+  "body": "the details",
+  "conversation": "carry this across a thread (optional)",
+  "in_reply_to": "<message id you're replying to> (optional)"
+}
+\`\`\`
+
+The harness/router fills in \`id\`, \`from\`, \`hops\`, and timestamps.
+
+## Rules of the road
+- Only \`request\`, \`query\`, and \`propose\` expect a reply. \`inform\` and \`done\` are terminal — don't reply to them, or two agents will loop forever.
+- For anything ambiguous, cross-cutting, or needing sign-off, message \`god\` (resolved to the primary agent, e.g., Nika).
+- \`board.md\` is the shared plan. Don't edit it directly unless you are the god agent; others \`propose\` changes to \`god\`, who is its sole scribe.
+- Re-reading a message you already moved to \ crowd.done/\` is a no-op. Don't reprocess.
+
+## The work: board.md vs tasks.json
+There are two shared surfaces, both in the hive root:
+- \`board.md\` — the freeform narrative plan. The god agent is its sole scribe; others \`propose\` edits.
+- \`tasks.json\` — the structured task ledger (a kanban: \`todo / doing / blocked / done\`, with title, assignee, priority, deps). Keep the task you're working reflected in its status.
+`;
+
+function loadConfig() {
+  if (!fs.existsSync(CONFIG_FILE)) {
+    console.error(`✗ No existe la configuración de agentes en: ${CONFIG_FILE}`);
+    process.exit(1);
+  }
+  return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+}
+
+function ensureHive() {
+  if (!fs.existsSync(HIVE_DIR)) {
+    fs.mkdirSync(HIVE_DIR, { recursive: true });
+  }
+
+  const cfg = loadConfig();
+  fs.writeFileSync(path.join(HIVE_DIR, 'PROTOCOL.md'), PROTOCOL_MD, 'utf8');
+
+  // Inicializar registry.json
+  const registryPath = path.join(HIVE_DIR, 'registry.json');
+  if (!fs.existsSync(registryPath)) {
+    const registry = {
+      godId: cfg.primary || 'Nika',
+      agents: {}
+    };
+    cfg.agents.forEach(a => {
+      registry.agents[a.name] = {
+        id: a.name,
+        name: a.name,
+        role: a.role || 'agent',
+        cli: a.cli || cfg.cli || 'jcode',
+        model: a.model || cfg.model || null,
+        extraArgs: a.extraArgs || null,
+        cwd: REPO_DIR,
+        status: 'idle',
+        lastSeen: Date.now()
+      };
+    });
+    fs.writeFileSync(registryPath, JSON.stringify(registry, null, 2), 'utf8');
+  }
+
+  // Inicializar board.md
+  const boardPath = path.join(HIVE_DIR, 'board.md');
+  if (!fs.existsSync(boardPath)) {
+    fs.writeFileSync(boardPath, '# Hive Board\n\n_Shared plans live here. The god agent (Michael/Nika) is the scribe._\n', 'utf8');
+  }
+
+  // Inicializar tasks.json
+  const tasksPath = path.join(HIVE_DIR, 'tasks.json');
+  if (!fs.existsSync(tasksPath)) {
+    fs.writeFileSync(tasksPath, JSON.stringify({ tasks: [] }, null, 2), 'utf8');
+  }
+
+  // Inicializar log.jsonl
+  const logPath = path.join(HIVE_DIR, 'log.jsonl');
+  if (!fs.existsSync(logPath)) {
+    fs.writeFileSync(logPath, '', 'utf8');
+  }
+
+  // Inicializar carpetas de agentes
+  const agentsDir = path.join(HIVE_DIR, 'agents');
+  fs.mkdirSync(agentsDir, { recursive: true });
+
+  cfg.agents.forEach(a => {
+    const agentDir = path.join(agentsDir, a.name);
+    fs.mkdirSync(agentDir, { recursive: true });
+    fs.mkdirSync(path.join(agentDir, 'inbox'), { recursive: true });
+    fs.mkdirSync(path.join(agentDir, 'inbox', '.done'), { recursive: true });
+    fs.mkdirSync(path.join(agentDir, 'outbox'), { recursive: true });
+
+    // identity.md
+    fs.writeFileSync(path.join(agentDir, 'identity.md'), `# Identity: ${a.name}\n\nRole: ${a.role || 'Collaborator'}\n\n## System Instructions:\n${a.prompt}\n`, 'utf8');
+
+    // memory.md
+    const memoryPath = path.join(agentDir, 'memory.md');
+    if (!fs.existsSync(memoryPath)) {
+      fs.writeFileSync(memoryPath, `# Memory of ${a.name}\n\n- Initialized hive memory.\n`, 'utf8');
+    }
+
+    // cursor.json
+    const cursorPath = path.join(agentDir, 'cursor.json');
+    if (!fs.existsSync(cursorPath)) {
+      fs.writeFileSync(cursorPath, JSON.stringify({ lastProcessed: null }, null, 2), 'utf8');
+    }
+  });
+
+  console.log(`✓ Hive inicializado correctamente en: ${HIVE_DIR}`);
+}
+
+function routeMessages() {
+  const registryPath = path.join(HIVE_DIR, 'registry.json');
+  if (!fs.existsSync(registryPath)) return;
+
+  let registry;
+  try {
+    registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
+  } catch (e) {
+    console.error("Failed to read registry.json:", e);
+    return;
+  }
+
+  const agentsDir = path.join(HIVE_DIR, 'agents');
+  if (!fs.existsSync(agentsDir)) return;
+
+  const agentDirs = fs.readdirSync(agentsDir);
+  for (const agentName of agentDirs) {
+    const outboxDir = path.join(agentsDir, agentName, 'outbox');
+    if (!fs.existsSync(outboxDir)) continue;
+
+    const files = fs.readdirSync(outboxDir).filter(f => f.endsWith('.json'));
+    for (const file of files) {
+      const filepath = path.join(outboxDir, file);
+      let msg;
+      try {
+        msg = JSON.parse(fs.readFileSync(filepath, 'utf8'));
+      } catch (e) {
+        console.error(`Failed to parse outbox message ${file} from ${agentName}:`, e);
+        fs.unlinkSync(filepath);
+        continue;
+      }
+
+      // Rellenar metadatos
+      msg.from = agentName;
+      msg.id = msg.id || Math.random().toString(36).substring(2, 8);
+      msg.hops = (msg.hops || 0) + 1;
+      msg.created_at = msg.created_at || new Date().toISOString();
+
+      const to = msg.to;
+      const timestamp = Date.now();
+      const targetFilename = `${timestamp}-${msg.id}.json`;
+
+      let destinations = [];
+      if (to === 'broadcast') {
+        destinations = Object.keys(registry.agents).filter(name => name !== agentName);
+      } else if (to === 'god') {
+        destinations = [registry.godId || 'Nika'];
+      } else if (registry.agents[to]) {
+        destinations = [to];
+      } else {
+        console.warn(`[router] Destinatario desconocido "${to}" en mensaje de ${agentName}. Enrutando a God.`);
+        destinations = [registry.godId || 'Nika'];
+      }
+
+      for (const dest of destinations) {
+        const destInbox = path.join(agentsDir, dest, 'inbox');
+        if (fs.existsSync(destInbox)) {
+          fs.writeFileSync(path.join(destInbox, targetFilename), JSON.stringify(msg, null, 2));
+          console.log(`✉️ [router] Mensaje enrutado de ${agentName} a ${dest}: "${msg.subject}"`);
+        }
+      }
+
+      // Escribir en log.jsonl
+      const logEntry = {
+        kind: 'message',
+        id: msg.id,
+        from: msg.from,
+        to: msg.to,
+        act: msg.act,
+        subject: msg.subject,
+        hops: msg.hops,
+        created_at: msg.created_at
+      };
+      fs.appendFileSync(path.join(HIVE_DIR, 'log.jsonl'), JSON.stringify(logEntry) + '\n');
+
+      // Eliminar de outbox
+      fs.unlinkSync(filepath);
+    }
+  }
+}
+
+// Auxiliares de análisis sintáctico robustos
+function parseSendMessages(text) {
+  const matches = [];
+  const regex = /\[SEND_MESSAGE\]\s*(?:```(?:json)?\s*)?(\{[\s\S]*?\})(?:\s*```)?/gi;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    try {
+      matches.push(JSON.parse(match[1]));
+    } catch (e) {
+      const jsonStart = match[1].indexOf('{');
+      const jsonEnd = match[1].lastIndexOf('}');
+      if (jsonStart !== -1 && jsonEnd !== -1) {
+        try {
+          matches.push(JSON.parse(match[1].slice(jsonStart, jsonEnd + 1)));
+        } catch (_) {}
+      }
+    }
+  }
+  return matches;
+}
+
+function parseUpdateMemory(text) {
+  const regex = /\[UPDATE_MEMORY\]\s*([\s\S]*?)(?:\[END_UPDATE_MEMORY\]|$)/i;
+  const match = regex.exec(text);
+  return match ? match[1].trim() : null;
+}
+
+function parseUpdateBoard(text) {
+  const regex = /\[UPDATE_BOARD\]\s*([\s\S]*?)(?:\[END_UPDATE_BOARD\]|$)/i;
+  const match = regex.exec(text);
+  return match ? match[1].trim() : null;
+}
+
+function parseUpdateTasks(text) {
+  const regex = /\[UPDATE_TASKS\]\s*(?:```(?:json)?\s*)?(\{[\s\S]*?\})(?:\s*```)?(?:\[END_UPDATE_TASKS\]|$)/i;
+  const match = regex.exec(text);
+  if (!match) return null;
+  try {
+    return JSON.parse(match[1]);
+  } catch (e) {
+    const jsonStart = match[1].indexOf('{');
+    const jsonEnd = match[1].lastIndexOf('}');
+    if (jsonStart !== -1 && jsonEnd !== -1) {
+      try {
+        return JSON.parse(match[1].slice(jsonStart, jsonEnd + 1))
+      } catch (_) {}
+    }
+  }
+  return null;
+}
+
+function runJcode(prompt, sessionId, model, extraArgs) {
+  const args = ['--quiet', 'run', '--json'];
+  if (sessionId) args.push('--resume', sessionId);
+  if (model) {
+    const cleanModel = model.includes('@') ? model.split('@')[0] : model;
+    args.push('--model', cleanModel);
+  }
+  if (extraArgs) args.push(...extraArgs);
+  args.push(prompt);
+
+  const env = { ...process.env };
+  delete env.LD_PRELOAD;
+  delete env.LD_LIBRARY_PATH;
+  env.GLIBC_TUNABLES = "glibc.rtld.dynamic_sort=1";
+
+  const result = spawnSync('jcode', args, {
+    env,
+    timeout: 300000,
+    maxBuffer: 10 * 1024 * 1024,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+
+  if (result.error) throw result.error;
+  if (result.status !== 0) throw new Error(result.stderr || 'jcode exited with code ' + result.status);
+
+  const stdout = (result.stdout || '').trim();
+  const out = { text: stdout, sessionId: null };
+  const lines = stdout.split('\n').filter(l => l.trim());
+  for (let i = lines.length - 1; i >= 0; i--) {
+    try {
+      const obj = JSON.parse(lines[i]);
+      if (obj.session_id) out.sessionId = obj.session_id;
+      if (obj.result !== undefined) { out.text = obj.result; break; }
+      if (obj.text !== undefined) { out.text = obj.text; break; }
+    } catch {}
+  }
+  return out;
+}
+
+function runClaude(prompt, sessionId, model, extraArgs) {
+  const args = ['-p', prompt, '--output-format', 'json'];
+  if (sessionId) args.push('--resume', sessionId);
+  if (model) args.push('--model', model);
+  if (extraArgs) args.push(...extraArgs);
+
+  const result = spawnSync('claude', args, {
+    timeout: 300000,
+    maxBuffer: 10 * 1024 * 1024,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+
+  if (result.error) throw result.error;
+  if (result.status !== 0) throw new Error(result.stderr || 'claude exited with code ' + result.status);
+
+  const stdout = (result.stdout || '').trim();
+  const out = { text: stdout, sessionId: null };
+  const lines = stdout.split('\n').filter(l => l.trim());
+  for (let i = lines.length - 1; i >= 0; i--) {
+    try {
+      const obj = JSON.parse(lines[i]);
+      if (obj.session_id) out.sessionId = obj.session_id;
+      if (obj.result !== undefined) { out.text = obj.result; break; }
+    } catch {}
+  }
+  return out;
+}
+
+function runCodex(prompt, sessionId, model, extraArgs) {
+  const args = ['exec', '--ephemeral'];
+  if (model) args.push('-c', `model="${model}"`);
+  if (extraArgs) args.push(...extraArgs);
+  args.push(prompt);
+
+  const result = spawnSync('codex', args, {
+    timeout: 300000,
+    maxBuffer: 10 * 1024 * 1024,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+
+  if (result.error) throw result.error;
+  if (result.status !== 0) throw new Error(result.stderr || 'codex exited with code ' + result.status);
+
+  let text = '';
+  const lines = (result.stdout || '').trim().split('\n');
+  for (const line of lines) {
+    try {
+      const obj = JSON.parse(line);
+      if (obj.type === 'item.completed' && obj.item && obj.item.type === 'agent_message') {
+        text = obj.item.text;
+      }
+    } catch {}
+  }
+  return { text, sessionId: null };
+}
+
+function runAgent(agentName) {
+  const registryPath = path.join(HIVE_DIR, 'registry.json');
+  if (!fs.existsSync(registryPath)) return;
+
+  const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
+  const agent = registry.agents[agentName];
+  if (!agent || agent.archived) return;
+
+  const agentDir = path.join(HIVE_DIR, 'agents', agentName);
+  const inboxDir = path.join(agentDir, 'inbox');
+  const doneDir = path.join(inboxDir, '.done');
+
+  if (!fs.existsSync(inboxDir)) return;
+
+  const files = fs.readdirSync(inboxDir).filter(f => f.endsWith('.json')).sort();
+  if (files.length === 0) return;
+
+  const boardPath = path.join(HIVE_DIR, 'board.md');
+  const tasksPath = path.join(HIVE_DIR, 'tasks.json');
+  const identityPath = path.join(agentDir, 'identity.md');
+  const memoryPath = path.join(agentDir, 'memory.md');
+
+  const identity = fs.existsSync(identityPath) ? fs.readFileSync(identityPath, 'utf8') : '';
+  const memory = fs.existsSync(memoryPath) ? fs.readFileSync(memoryPath, 'utf8') : '';
+  const board = fs.existsSync(boardPath) ? fs.readFileSync(boardPath, 'utf8') : '';
+  const tasks = fs.existsSync(tasksPath) ? fs.readFileSync(tasksPath, 'utf8') : '{}';
+
+  // Cambiar estado a trabajando
+  agent.status = 'working';
+  agent.lastSeen = Date.now();
+  fs.writeFileSync(registryPath, JSON.stringify(registry, null, 2), 'utf8');
+
+  for (const file of files) {
+    const filepath = path.join(inboxDir, file);
+    let msg;
+    try {
+      msg = JSON.parse(fs.readFileSync(filepath, 'utf8'));
+    } catch (e) {
+      console.error(`Failed to parse inbox message ${file} for ${agentName}:`, e);
+      fs.unlinkSync(filepath);
+      continue;
+    }
+
+    console.log(`\n🤖 [${agentName}] Procesando mensaje de ${msg.from}: "${msg.subject}"`);
+
+    const prompt = `You are the agent "${agentName}". You must coordinate using the Hive folder-based protocol.
+
+Identity:
+${identity}
+
+Your Long-term Memory (memory.md):
+${memory}
+
+Shared Blackboard (board.md):
+${board}
+
+Structured Tasks (tasks.json):
+${tasks}
+
+=======================
+INCOMING MESSAGE TO PROCESS:
+From: ${msg.from}
+Act: ${msg.act}
+Subject: ${msg.subject}
+Body:
+${msg.body}
+
+=======================
+INSTRUCTIONS:
+1. Process the incoming message. You can execute bash tools (like termux commands) to perform requested actions or verify information.
+2. If you want to send messages to other agents, write one or more blocks like:
+[SEND_MESSAGE] {"to": "recipient_name", "act": "request|inform|propose|agree|done", "subject": "summary", "body": "details"}
+3. If you learn something that should be saved in your long-term memory, output the updated memory:
+[UPDATE_MEMORY]
+your new memory content here...
+[END_UPDATE_MEMORY]
+4. If you are the god agent (${registry.godId}) and you need to update the shared blackboard plan:
+[UPDATE_BOARD]
+updated board.md content here...
+[END_UPDATE_BOARD]
+5. If you want to update the structured task ledger (kanban):
+[UPDATE_TASKS]
+{"tasks": [...]}
+[END_UPDATE_TASKS]
+
+Be concise and direct. Output your response now.`;
+
+    const cli = agent.cli || 'jcode';
+    const model = agent.model;
+    const extraArgs = agent.extraArgs ? agent.extraArgs.split(/\s+/) : null;
+
+    let outText = '';
+    const askFn = cli === 'jcode' ? runJcode : (cli === 'claude' ? runClaude : runCodex);
+    
+    try {
+      const out = askFn(prompt, agent.sessionId || null, model, extraArgs);
+      outText = out.text;
+      if (out.sessionId) {
+        agent.sessionId = out.sessionId;
+      }
+    } catch (e) {
+      console.error(`[${agentName}] CLI error:`, e.message);
+      const logErr = {
+        kind: 'error',
+        agent: agentName,
+        error: e.message,
+        timestamp: new Date().toISOString()
+      };
+      fs.appendFileSync(path.join(HIVE_DIR, 'log.jsonl'), JSON.stringify(logErr) + '\n');
+      continue;
+    }
+
+    console.log(`🤖 [${agentName}] Respuesta recibida. Procesando salidas del protocolo...`);
+
+    // Parsear salidas
+    const sendMessages = parseSendMessages(outText);
+    const newMemory = parseUpdateMemory(outText);
+    const newBoard = parseUpdateBoard(outText);
+    const newTasks = parseUpdateTasks(outText);
+
+    // Escribir outbox
+    const outboxDir = path.join(agentDir, 'outbox');
+    for (const sendMsg of sendMessages) {
+      const msgId = Math.random().toString(36).substring(2, 8);
+      fs.writeFileSync(path.join(outboxDir, `${msgId}.json`), JSON.stringify(sendMsg, null, 2), 'utf8');
+      console.log(`  -> Mensaje encolado en outbox para ${sendMsg.to}: "${sendMsg.subject}"`);
+    }
+
+    // Escribir memoria
+    if (newMemory !== null) {
+      fs.writeFileSync(memoryPath, newMemory, 'utf8');
+      console.log(`  -> Memoria de largo plazo actualizada.`);
+    }
+
+    // Escribir board (solo si es God/Primary)
+    if (newBoard !== null) {
+      if (registry.godId === agentName || agentName === 'Nika') {
+        fs.writeFileSync(boardPath, newBoard, 'utf8');
+        console.log(`  -> Board compartido actualizado.`);
+      } else {
+        console.warn(`  -> Intento bloqueado de actualizar board por no ser God: ${agentName}`);
+      }
+    }
+
+    // Escribir tareas
+    if (newTasks !== null) {
+      fs.writeFileSync(tasksPath, JSON.stringify(newTasks, null, 2), 'utf8');
+      console.log(`  -> Kanban de tareas actualizado.`);
+    }
+
+    // Marcar como procesado (mover a .done/)
+    fs.renameSync(filepath, path.join(doneDir, file));
+  }
+
+  // Restaurar estado a idle
+  agent.status = 'idle';
+  agent.lastSeen = Date.now();
+  fs.writeFileSync(registryPath, JSON.stringify(registry, null, 2), 'utf8');
+}
+
+async function runSequentialLoop() {
+  console.log(`🚀 Iniciando bucle local de Hive en: ${HIVE_DIR}`);
+  console.log(`Agentes activos en el bucle. Presiona Ctrl+C para salir.\n`);
+  
+  const registryPath = path.join(HIVE_DIR, 'registry.json');
+  if (!fs.existsSync(registryPath)) {
+    console.error("✗ Registry.json no encontrado. Ejecuta 'walkie-hive init' primero.");
+    process.exit(1);
+  }
+
+  while (true) {
+    routeMessages();
+
+    const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
+    for (const agentName of Object.keys(registry.agents)) {
+      try {
+        runAgent(agentName);
+      } catch (e) {
+        console.error(`✗ Error al ejecutar agente ${agentName}:`, e.message);
+      }
+    }
+
+    await new Promise(res => setTimeout(res, 3000));
+  }
+}
+
+function runRouterLoop() {
+  console.log(`🔀 Iniciando enrutador del Hive en: ${HIVE_DIR}`);
+  setInterval(() => {
+    routeMessages();
+  }, 2000);
+}
+
+function runAgentLoop(agentName) {
+  console.log(`🤖 Iniciando bucle para el agente "${agentName}" en: ${HIVE_DIR}`);
+  setInterval(() => {
+    runAgent(agentName);
+  }, 3000);
+}
+
+function showStatus() {
+  if (!fs.existsSync(HIVE_DIR)) {
+    console.log("El Hive no está inicializado. Ejecuta: walkie-hive init");
+    return;
+  }
+  
+  const registry = JSON.parse(fs.readFileSync(path.join(HIVE_DIR, 'registry.json'), 'utf8'));
+  const tasks = JSON.parse(fs.readFileSync(path.join(HIVE_DIR, 'tasks.json'), 'utf8'));
+  const board = fs.readFileSync(path.join(HIVE_DIR, 'board.md'), 'utf8');
+
+  console.log(`\n=== Hive Status ===`);
+  console.log(`God/Orquestador: ${registry.godId}`);
+  console.log(`Agentes registrados:`);
+  for (const [name, data] of Object.entries(registry.agents)) {
+    const inboxPath = path.join(HIVE_DIR, 'agents', name, 'inbox');
+    const outboxPath = path.join(HIVE_DIR, 'agents', name, 'outbox');
+    const pendingIn = fs.existsSync(inboxPath) ? fs.readdirSync(inboxPath).filter(f => f.endsWith('.json')).length : 0;
+    const pendingOut = fs.existsSync(outboxPath) ? fs.readdirSync(outboxPath).filter(f => f.endsWith('.json')).length : 0;
+    console.log(`  - ${name} [${data.role}] (${data.status}) - Inbox: ${pendingIn} pdte, Outbox: ${pendingOut} pdte`);
+  }
+
+  console.log(`\n=== Tareas activas (Kanban) ===`);
+  if (!tasks.tasks || tasks.tasks.length === 0) {
+    console.log("  Ninguna tarea creada.");
+  } else {
+    tasks.tasks.forEach(t => {
+      console.log(`  [${t.status.toUpperCase()}] ID: ${t.id} - ${t.title} (Asignado: ${t.assignee || 'Sin asignar'}, Pri: ${t.priority})`);
+    });
+  }
+
+  console.log(`\n=== Board Compartido (Resumen) ===`);
+  const lines = board.split('\n').slice(0, 10);
+  lines.forEach(l => console.log(`  ${l}`));
+  if (board.split('\n').length > 10) console.log("  ...");
+}
+
+function addTask(title, description, assignee) {
+  ensureHive();
+  const tasksPath = path.join(HIVE_DIR, 'tasks.json');
+  const tasks = JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
+  
+  const id = 'task-' + Math.random().toString(36).substring(2, 6);
+  const newTask = {
+    id,
+    title,
+    description: description || '',
+    assignee: assignee || null,
+    status: 'todo',
+    dependsOn: [],
+    priority: 1,
+    createdAt: new Date().toISOString()
+  };
+
+  tasks.tasks.push(newTask);
+  fs.writeFileSync(tasksPath, JSON.stringify(tasks, null, 2), 'utf8');
+  console.log(`✓ Tarea creada con éxito. ID: ${id}`);
+
+  const registry = JSON.parse(fs.readFileSync(path.join(HIVE_DIR, 'registry.json'), 'utf8'));
+  const god = registry.godId || 'Nika';
+  const godInbox = path.join(HIVE_DIR, 'agents', god, 'inbox');
+  
+  const msg = {
+    to: god,
+    from: 'human',
+    act: 'request',
+    subject: `Nueva tarea asignada: ${title}`,
+    body: `Se ha creado la tarea "${title}". ID: ${id}.\nDescripción: ${description || 'Ninguna'}.\nAsignado a: ${assignee || 'Sin asignar'}.\nPor favor, organízate con el resto de la flota para procesarla y completarla.`,
+    created_at: new Date().toISOString()
+  };
+
+  const filename = `${Date.now()}-human-${id}.json`;
+  fs.writeFileSync(path.join(godInbox, filename), JSON.stringify(msg, null, 2), 'utf8');
+  console.log(`✉️ Notificado el agente orquestador (${god}) en su inbox.`);
+}
+
+function runTmux() {
+  const registryPath = path.join(HIVE_DIR, 'registry.json');
+  if (!fs.existsSync(registryPath)) {
+    console.error("✗ Registry.json no encontrado. Ejecuta 'walkie-hive init' primero.");
+    process.exit(1);
+  }
+
+  const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
+  const agents = Object.keys(registry.agents);
+  const session = 'walkie-hive';
+
+  console.log(`Lanzando Hive en Tmux sesión "${session}"...`);
+  spawnSync('tmux', ['kill-session', '-t', session], { stdio: 'ignore' });
+  spawnSync('tmux', ['new-session', '-d', '-s', session, '-x', '220', '-y', '50'], { stdio: 'ignore' });
+  
+  // Panel 0: El enrutador (Router)
+  spawnSync('tmux', ['send-keys', '-t', `${session}.0`, `walkie-hive router`, 'C-m'], { stdio: 'ignore' });
+
+  // Crear paneles para cada agente
+  agents.forEach((agentName, i) => {
+    const pane = i + 1;
+    spawnSync('tmux', ['split-window', '-t', session, '-h'], { stdio: 'ignore' });
+    const cmdline = `sleep ${pane} && walkie-hive agent ${agentName}`;
+    spawnSync('tmux', ['send-keys', '-t', `${session}.${pane}`, cmdline, 'C-m'], { stdio: 'ignore' });
+  });
+
+  spawnSync('tmux', ['select-layout', '-t', session, 'tiled'], { stdio: 'ignore' });
+  console.log(`✓ Hive lanzado en Tmux: "tmux attach -t ${session}"`);
+}
+
+// CLI Switch
+const cmd = process.argv[2];
+
+switch (cmd) {
+  case 'init':
+    ensureHive();
+    break;
+  case 'status':
+    showStatus();
+    break;
+  case 'add-task': {
+    const title = process.argv[3];
+    const desc = process.argv[4];
+    const assignee = process.argv[5];
+    if (!title) {
+      console.error("Uso: walkie-hive add-task <título> [descripción] [asignado]");
+      process.exit(1);
+    }
+    addTask(title, desc, assignee);
+    break;
+  }
+  case 'router':
+    runRouterLoop();
+    break;
+  case 'agent': {
+    const name = process.argv[3];
+    if (!name) {
+      console.error("Uso: walkie-hive agent <nombre_agente>");
+      process.exit(1);
+    }
+    runAgentLoop(name);
+    break;
+  }
+  case 'start':
+    ensureHive();
+    if (process.argv.includes('--tmux')) {
+      runTmux();
+    } else {
+      runSequentialLoop();
+    }
+    break;
+  default:
+    console.log(`
+Uso: walkie-hive <comando>
+
+Comandos:
+  init                     Inicializa la estructura del Hive en walkieTermux/hive/
+  status                   Muestra el estado actual del Hive, tareas y mensajes
+  add-task <t> [d] [a]     Añade una nueva tarea y notifica al orquestador (God)
+  start [--tmux]           Inicia el Hive (sin bandera: bucle secuencial; --tmux: paneles tmux)
+  router                   Bucle de enrutamiento manual (outbox -> inbox)
+  agent <nombre>           Bucle de ejecución manual para un agente
+`);
+    process.exit(0);
+}

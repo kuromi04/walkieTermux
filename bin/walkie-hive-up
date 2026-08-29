@@ -1,0 +1,18 @@
+#!/data/data/com.termux/files/usr/bin/env bash
+# Copyright (c) 2026 kuromi04 · WalkieTermux. GPL-3.0 License.
+# walkie-hive-up - Inicia todo el ecosistema del Hive (X11, agentes y GUI) con un solo comando
+
+# 1. Iniciar termux-x11 si no está corriendo
+if ! pgrep -x termux-x11 >/dev/null; then
+  echo "🔌 Servidor X11 no detectado. Iniciando Termux:X11..."
+  termux-x11 :0 -ac &
+  sleep 1
+fi
+
+# 2. Iniciar el motor de agentes en segundo plano usando Tmux
+echo "🐝 Iniciando motor de agentes walkie-hive en segundo plano (Tmux)..."
+tmux kill-session -t walkie-hive 2>/dev/null
+tmux new-session -d -s walkie-hive "walkie-hive start"
+
+# 3. Lanzar la GUI de Munder Difflin en primer plano
+walkie-hive-gui

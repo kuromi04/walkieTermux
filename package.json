@@ -27,6 +27,9 @@
   "bin": {
     "walkie": "./bin/walkie.js",
     "walkie-fleet": "./bin/walkie-fleet",
+    "walkie-hive": "./bin/walkie-hive",
+    "walkie-hive-gui": "./bin/walkie-hive-gui",
+    "walkie-hive-up": "./bin/walkie-hive-up",
     "walkie-whatsapp": "./bin/walkie-whatsapp.js"
   },
   "files": [
