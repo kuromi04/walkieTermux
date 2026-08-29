@@ -14,5 +14,9 @@ echo "🐝 Iniciando motor de agentes walkie-hive en segundo plano (Tmux)..."
 tmux kill-session -t walkie-hive 2>/dev/null
 tmux new-session -d -s walkie-hive "walkie-hive start"
 
-# 3. Lanzar la GUI de Munder Difflin en primer plano
+# 3. Abrir la aplicación Termux:X11 en el teléfono para visualizar la GUI
+echo "📱 Abriendo la aplicación Termux:X11..."
+am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity 2>/dev/null || echo "⚠️ Usa 'am start' falló. Abre Termux:X11 manualmente."
+
+# 4. Lanzar la GUI de Munder Difflin en primer plano
 walkie-hive-gui
