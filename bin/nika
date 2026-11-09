@@ -42,6 +42,12 @@ do_start() {
         fi
     fi
     
+    # 4. Iniciar Guardián de Batería si no está corriendo
+    if ! pgrep -f "nika-battery-guard" >/dev/null 2>&1; then
+        nohup "${HOME}/.local/bin/nika-battery-guard" </dev/null >/dev/null 2>&1 &
+        echo -e "  [+] ${GREEN}Battery Guard activado${RESET} (auto-apagado si batería <= 15%)"
+    fi
+    
     sleep 1
     echo -e "\n${GREEN}${BOLD}¡Todo encendido y sincronizado! Habla con @walkietermux_bot en Telegram.${RESET}\n"
     do_status
@@ -49,6 +55,9 @@ do_start() {
 
 do_stop() {
     echo -e "${YELLOW}${BOLD}==> Deteniendo ecosistema de Nika & Walkie...${RESET}"
+    
+    # 0. Detener Battery Guard
+    pkill -f "nika-battery-guard" 2>/dev/null || true
     
     # 1. Detener puente de Telegram
     walkie-tg stop
@@ -93,6 +102,16 @@ do_status() {
         echo -e "${GREEN}ACTIVO (PID: $nika_pid)${RESET}"
     else
         echo -e "${RED}INACTIVO${RESET}"
+    fi
+
+    # Guardián de Batería
+    echo -ne "  ${BOLD}Guardián de Batería:${RESET} "
+    local guard_pid
+    guard_pid=$(pgrep -f "nika-battery-guard" | head -n 1 || true)
+    if [ -n "$guard_pid" ]; then
+        echo -e "${GREEN}ACTIVO (PID: $guard_pid)${RESET}"
+    else
+        echo -e "${YELLOW}INACTIVO${RESET}"
     fi
     
     # Estado de Nova y Kai

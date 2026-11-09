@@ -278,15 +278,32 @@ Guía completa: [`docs/WHATSAPP.md`](docs/WHATSAPP.md)
 
 ### Gestor Central `nika`
 
-Controla todo el ecosistema (puente Telegram + flota de agentes + Wake-Lock de Android) con un solo comando:
+Controla todo el ecosistema (puente Telegram + flota de agentes + Wake-Lock de Android + Guardián de Batería) con un solo comando:
 
 ```bash
-nika on          # Enciende todo: Wake-Lock + Telegram + Agentes (Nika, Nova, Kai)
+nika on          # Enciende todo: Wake-Lock + Telegram + Agentes + Battery Guard
 nika off         # Apaga todo y libera la CPU para ahorrar batería
-nika status      # Muestra el estado en vivo de los PIDs y el Chat ID vinculado
+nika status      # Muestra el estado en vivo de los PIDs, Guardián y Chat ID
 nika logs        # Muestra los últimos mensajes de Telegram y respuestas
 nika restart     # Reinicia todos los servicios
 ```
+
+### Funciones Avanzadas de Automatización & Seguridad
+
+1. **📱 Widgets en Pantalla de Inicio (Termux:Widget)**:
+   - Scripts listos en `~/.shortcuts/`: `🟢_Nika_ON`, `🔴_Nika_OFF` y `📊_Nika_Status`.
+   - Permiten encender, apagar o consultar el estado de Nika directamente tocando un icono en la pantalla de inicio de tu Android sin abrir la terminal.
+2. **🔔 Notificaciones Nativas de Android**:
+   - Cada vez que Nika o cualquier agente responde en el canal, se genera una notificación emergente nativa mediante `termux-notification`.
+3. **🔋 Guardián Inteligente de Batería (`nika-battery-guard`)**:
+   - Monitoreo en tiempo real del porcentaje de batería. Si el nivel cae al 15% o menos y el móvil no está cargando:
+     1. Envía un mensaje urgente por Telegram.
+     2. Muestra una notificación con vibración en Android.
+     3. Ejecuta `nika off` automáticamente para evitar que el teléfono se descargue por completo.
+4. **🛡️ Whitelist Estricta & Alertas de Intrusión**:
+   - Vinculado al Chat ID del propietario (`5683759091`).
+   - Cualquier usuario desconocido que intente enviar comandos al bot es bloqueado de inmediato con un mensaje de acceso denegado.
+   - El propietario recibe un aviso inmediato por Telegram y una notificación prioritaria en Android con el usuario y texto del intruso.
 
 ### Comandos de Hardware desde Telegram
 Al hablar con tu bot de Telegram (`@walkietermux_bot`), el agente primario **Nika** puede controlar el hardware de tu teléfono Android en tiempo real:

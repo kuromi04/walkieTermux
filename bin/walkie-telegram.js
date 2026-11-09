@@ -116,6 +116,22 @@ async function run(channelArg, opts) {
     return api('sendMessage', { chat_id: chatId, text }).catch((e) => log('sendMessage fallo:', e.message))
   }
 
+  function triggerAndroidNotification(title, text, isAlert = false) {
+    try {
+      const { spawn } = require('child_process')
+      const clean = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 100)
+      const args = [
+        '--id', isAlert ? 'nika_security_alert' : 'nika_agent_msg',
+        '-t', title,
+        '-c', clean,
+        '--priority', isAlert ? 'max' : 'high',
+        '--vibrate', isAlert ? '600' : '200'
+      ]
+      if (isAlert) args.push('--sound')
+      spawn('termux-notification', args, { stdio: 'ignore' }).unref()
+    } catch {}
+  }
+
   function mimeFor(file) {
     const ext = path.extname(file).toLowerCase()
     const map = {
@@ -228,6 +244,7 @@ async function run(channelArg, opts) {
       }
       log('walkie -> Telegram:', `[${msg.from}]`, text.slice(0, 80))
       await sendTelegram(CHAT_ID, `[${msg.from || 'walkie'}]: ${text}`)
+      triggerAndroidNotification(`${msg.from || 'Nika'} (Walkie)`, text)
     }
 
     walkie.request({ action: 'join', channel: CHANNEL, secret: SECRET, clientId: WALKIE_ID, persist: true })
@@ -259,7 +276,19 @@ async function run(channelArg, opts) {
           if (!CHAT_ID) {
             if (m.chat && (m.chat.id || m.chat.id === 0)) saveChat(m.chat.id)
           }
-          if (CHAT_ID && m.chat && m.chat.id !== Number(CHAT_ID)) continue
+          if (CHAT_ID && m.chat && Number(m.chat.id) !== Number(CHAT_ID)) {
+            log('⛔ Acceso no autorizado bloqueado:', m.chat.id, m.from?.username || '')
+            api('sendMessage', {
+              chat_id: m.chat.id,
+              text: '⛔ Acceso denegado: este bot es privado y exclusivo de @kuromi04.'
+            }).catch(() => {})
+            api('sendMessage', {
+              chat_id: CHAT_ID,
+              text: `🛡️ [Seguridad] Intento de acceso bloqueado de @${m.from?.username || m.from?.first_name || 'anónimo'} (ID: ${m.chat.id}): "${m.text || '[archivo]'}"`
+            }).catch(() => {})
+            triggerAndroidNotification('🛡️ Alerta de Seguridad', `Intento de acceso bloqueado de @${m.from?.username || m.chat.id}`, true)
+            continue
+          }
           const caption = m.caption || ''
           let fileId = null
           let kind = null

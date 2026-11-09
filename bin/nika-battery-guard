@@ -1,0 +1,63 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# ==============================================================================
+#  Nika Battery Watchdog
+#  Monitorea batería y apaga el sistema de forma segura si baja del 15%
+# ==============================================================================
+
+CONFIG_DIR="${HOME}/.config/walkie-tg"
+TOKEN_FILE="${CONFIG_DIR}/token"
+CHAT_FILE="${CONFIG_DIR}/chat.json"
+
+get_chat_id() {
+    if [ -f "$CHAT_FILE" ]; then
+        jq -r '.chatId // empty' "$CHAT_FILE" 2>/dev/null || echo "5683759091"
+    else
+        echo "5683759091"
+    fi
+}
+
+send_telegram_alert() {
+    local msg="$1"
+    if [ -f "$TOKEN_FILE" ]; then
+        local token
+        token=$(cat "$TOKEN_FILE" | tr -d '\r\n ')
+        local chat_id
+        chat_id=$(get_chat_id)
+        if [ -n "$token" ] && [ -n "$chat_id" ]; then
+            curl -s -X POST "https://api.telegram.org/bot${token}/sendMessage" \
+                -d "chat_id=${chat_id}" \
+                --data-urlencode "text=${msg}" >/dev/null 2>&1 || true
+        fi
+    fi
+}
+
+while true; do
+    if command -v termux-battery-status >/dev/null 2>&1; then
+        BATTERY_INFO=$(termux-battery-status 2>/dev/null)
+        if [ -n "$BATTERY_INFO" ]; then
+            PERCENT=$(echo "$BATTERY_INFO" | jq -r '.percentage // 100' 2>/dev/null)
+            PLUGGED=$(echo "$BATTERY_INFO" | jq -r '.plugged // "UNPLUGGED"' 2>/dev/null)
+            
+            # Si la batería está al 15% o menos y el teléfono NO está cargando
+            if [ "$PERCENT" -le 15 ] && [ "$PLUGGED" = "UNPLUGGED" ]; then
+                ALERT_MSG="⚠️ Alerta de Batería Crítica: Tu teléfono está al ${PERCENT}% sin cargador conectado. Nika y los agentes se apagarán automáticamente para proteger tu batería."
+                
+                # 1. Alerta por Telegram
+                send_telegram_alert "$ALERT_MSG"
+                
+                # 2. Notificación en Android
+                if command -v termux-notification >/dev/null 2>&1; then
+                    termux-notification -t "Nika Battery Guard" \
+                        -c "Batería al ${PERCENT}%. Apagando servicios..." \
+                        --priority max \
+                        --vibrate 1000 || true
+                fi
+                
+                # 3. Detener los servicios
+                /data/data/com.termux/files/home/.local/bin/nika off
+                exit 0
+            fi
+        fi
+    fi
+    sleep 60
+done

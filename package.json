@@ -32,7 +32,8 @@
     "walkie-hive-up": "./bin/walkie-hive-up",
     "walkie-whatsapp": "./bin/walkie-whatsapp.js",
     "walkie-telegram": "./bin/walkie-telegram.js",
-    "nika": "./bin/nika"
+    "nika": "./bin/nika",
+    "nika-battery-guard": "./bin/nika-battery-guard"
   },
   "files": [
     "bin/",

@@ -278,15 +278,32 @@ Full guide: [`docs/WHATSAPP.md`](docs/WHATSAPP.md)
 
 ### Central `nika` Manager
 
-Manage the entire mobile AI stack (Telegram bridge + multi-agent fleet + Android Wake-Lock) with simple commands:
+Manage the entire mobile AI stack (Telegram bridge + multi-agent fleet + Android Wake-Lock + Battery Guard) with simple commands:
 
 ```bash
-nika on          # Starts everything: Wake-Lock + Telegram + Agents (Nika, Nova, Kai)
+nika on          # Starts everything: Wake-Lock + Telegram + Agents + Battery Guard
 nika off         # Stops all processes and releases Wake-Lock to save battery
-nika status      # Displays live process PIDs and linked Telegram Chat ID
+nika status      # Displays live process PIDs, Battery Guard, and linked Chat ID
 nika logs        # Displays recent Telegram incoming messages and agent replies
 nika restart     # Restarts all services in 1 second
 ```
+
+### Advanced Automation & Security Features
+
+1. **📱 Home Screen Widgets (Termux:Widget)**:
+   - Ready scripts in `~/.shortcuts/`: `🟢_Nika_ON`, `🔴_Nika_OFF`, and `📊_Nika_Status`.
+   - Control or query Nika with a single tap from your Android home screen without launching a terminal.
+2. **🔔 Native Android Notifications**:
+   - Whenever Nika or agents respond, Android push notifications are triggered via `termux-notification`.
+3. **🔋 Smart Battery Guard (`nika-battery-guard`)**:
+   - Real-time battery monitoring. If the battery level drops to 15% or lower without a charger:
+     1. Dispatches an urgent Telegram message.
+     2. Vibrates and shows an Android high-priority notification.
+     3. Executes `nika off` automatically to prevent battery exhaustion.
+4. **🛡️ Strict Chat Whitelist & Intrusion Alerts**:
+   - Locked to the owner's Telegram Chat ID (`5683759091`).
+   - Unauthorized attempts receive an access denied notice.
+   - Owner receives instant Telegram alerts and priority Android notifications with intruder username and message payload.
 
 ### Android Hardware Control via Telegram
 When chatting with your Telegram bot, primary agent **Nika** directly controls Android hardware:
