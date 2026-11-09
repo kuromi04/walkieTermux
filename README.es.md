@@ -272,6 +272,34 @@ Guía completa: [`docs/WHATSAPP.md`](docs/WHATSAPP.md)
 
 ---
 
+## 🤖 Puente de Telegram & Comando Central `nika`
+
+**Walkie-Termux** incluye integración nativa bidireccional con **Telegram Bot API** mediante `walkie-telegram` (y el gestor `nika`), sin necesidad de frameworks pesados de Python:
+
+### Gestor Central `nika`
+
+Controla todo el ecosistema (puente Telegram + flota de agentes + Wake-Lock de Android) con un solo comando:
+
+```bash
+nika on          # Enciende todo: Wake-Lock + Telegram + Agentes (Nika, Nova, Kai)
+nika off         # Apaga todo y libera la CPU para ahorrar batería
+nika status      # Muestra el estado en vivo de los PIDs y el Chat ID vinculado
+nika logs        # Muestra los últimos mensajes de Telegram y respuestas
+nika restart     # Reinicia todos los servicios
+```
+
+### Comandos de Hardware desde Telegram
+Al hablar con tu bot de Telegram (`@walkietermux_bot`), el agente primario **Nika** puede controlar el hardware de tu teléfono Android en tiempo real:
+* *«Prende la linterna»* / *«Apaga la linterna»* (`termux-torch`)
+* *«Sube el volumen al máximo»* (`termux-volume`)
+* *«Toma una captura de pantalla»* (`screencap`)
+* *«Toma una foto con la cámara trasera/frontal»* (`termux-camera-photo`)
+
+### Auto-Arranque al Encender el Móvil (Termux:Boot)
+Si instalas el complemento [Termux:Boot](https://f-droid.org/packages/com.termux.boot/), el script `~/.termux/boot/start-nika.sh` iniciará a Nika y Telegram de forma automática y silenciosa cada vez que enciendas o reinicies tu smartphone.
+
+---
+
 ## 🧠 Referencia de Comandos
 
 | Comando | Propósito |

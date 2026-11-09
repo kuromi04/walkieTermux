@@ -272,6 +272,34 @@ Full guide: [`docs/WHATSAPP.md`](docs/WHATSAPP.md)
 
 ---
 
+## 🤖 Telegram Bridge & Central `nika` CLI
+
+**Walkie-Termux** features native bidirectional integration with the **Telegram Bot API** via `walkie-telegram` and the unified `nika` service manager, requiring zero heavy Python frameworks:
+
+### Central `nika` Manager
+
+Manage the entire mobile AI stack (Telegram bridge + multi-agent fleet + Android Wake-Lock) with simple commands:
+
+```bash
+nika on          # Starts everything: Wake-Lock + Telegram + Agents (Nika, Nova, Kai)
+nika off         # Stops all processes and releases Wake-Lock to save battery
+nika status      # Displays live process PIDs and linked Telegram Chat ID
+nika logs        # Displays recent Telegram incoming messages and agent replies
+nika restart     # Restarts all services in 1 second
+```
+
+### Android Hardware Control via Telegram
+When chatting with your Telegram bot, primary agent **Nika** directly controls Android hardware:
+* *"Turn on/off the flashlight"* (`termux-torch`)
+* *"Set volume to max"* (`termux-volume`)
+* *"Take a screenshot"* (`screencap`)
+* *"Take a photo with the camera"* (`termux-camera-photo`)
+
+### Auto-Start on Device Boot (Termux:Boot)
+Using the [Termux:Boot](https://f-droid.org/packages/com.termux.boot/) add-on, `~/.termux/boot/start-nika.sh` automatically launches Nika and the Telegram bridge whenever your smartphone boots up.
+
+---
+
 ## 🧠 Command Reference
 
 | Command | Purpose |

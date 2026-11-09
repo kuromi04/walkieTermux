@@ -30,7 +30,9 @@
     "walkie-hive": "./bin/walkie-hive",
     "walkie-hive-gui": "./bin/walkie-hive-gui",
     "walkie-hive-up": "./bin/walkie-hive-up",
-    "walkie-whatsapp": "./bin/walkie-whatsapp.js"
+    "walkie-whatsapp": "./bin/walkie-whatsapp.js",
+    "walkie-telegram": "./bin/walkie-telegram.js",
+    "nika": "./bin/nika"
   },
   "files": [
     "bin/",

@@ -1,0 +1,145 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# ==============================================================================
+#  Nika & Walkie Telegram Automation Service
+#  Gestor unificado de encendido, apagado y monitoreo
+# ==============================================================================
+
+PROJECT_DIR="${HOME}/proyects/walkieTermux"
+FLEET_LOG="${PROJECT_DIR}/fleet.log"
+TG_LOG="${HOME}/.config/walkie-tg/walkie-tg.log"
+
+# Colores
+GREEN='\033[1;32m'
+RED='\033[1;31m'
+YELLOW='\033[1;33m'
+CYAN='\033[1;36m'
+BOLD='\033[1m'
+RESET='\033[0m'
+
+do_start() {
+    echo -e "${CYAN}${BOLD}==> Iniciando ecosistema de Nika & Walkie...${RESET}"
+    
+    # 1. Mantener CPU activa para no cortar conexión con pantalla apagada
+    if command -v termux-wake-lock >/dev/null 2>&1; then
+        termux-wake-lock
+        echo -e "  [+] ${GREEN}Termux Wake-Lock activado${RESET} (CPU activa en suspensión)"
+    fi
+    
+    # 2. Iniciar el puente de Telegram
+    walkie-tg start
+    
+    # 3. Iniciar la flota de agentes si no están corriendo
+    local running_agents
+    running_agents=$(pgrep -f "walkie agent walkie_chat" | wc -l)
+    if [ "$running_agents" -gt 0 ]; then
+        echo -e "  [*] Agentes Walkie ya corriendo ($running_agents procesos)"
+    else
+        if [ -d "$PROJECT_DIR" ]; then
+            (cd "$PROJECT_DIR" && walkie-fleet start >/dev/null 2>&1)
+            echo -e "  [+] ${GREEN}Flota de agentes iniciada con éxito${RESET} (Nika, Nova, Kai)"
+        else
+            echo -e "  [-] ${RED}No se encontró el directorio $PROJECT_DIR${RESET}"
+        fi
+    fi
+    
+    sleep 1
+    echo -e "\n${GREEN}${BOLD}¡Todo encendido y sincronizado! Habla con @walkietermux_bot en Telegram.${RESET}\n"
+    do_status
+}
+
+do_stop() {
+    echo -e "${YELLOW}${BOLD}==> Deteniendo ecosistema de Nika & Walkie...${RESET}"
+    
+    # 1. Detener puente de Telegram
+    walkie-tg stop
+    
+    # 2. Detener agentes Walkie
+    local pids
+    pids=$(pgrep -f "walkie agent walkie_chat" || true)
+    if [ -n "$pids" ]; then
+        pkill -f "walkie agent walkie_chat" 2>/dev/null || true
+        echo -e "  [+] ${RED}Agentes Walkie detenidos${RESET} (PIDs: $pids)"
+    else
+        echo -e "  [*] No había agentes Walkie corriendo"
+    fi
+    
+    # 3. Liberar wake-lock para ahorrar batería
+    if command -v termux-wake-unlock >/dev/null 2>&1; then
+        termux-wake-unlock
+        echo -e "  [+] ${GREEN}Wake-Lock liberado${RESET} (Ahorro de batería restaurado)"
+    fi
+    
+    echo -e "\n${RED}${BOLD}Servicio completamente apagado.${RESET}\n"
+}
+
+do_status() {
+    echo -e "${CYAN}${BOLD}--- ESTADO DE NIKA & WALKIE ---${RESET}"
+    
+    # Estado del puente Telegram
+    echo -ne "  ${BOLD}Puente Telegram (walkie-tg):${RESET} "
+    local tg_pid
+    tg_pid=$(pgrep -f "node.*walkie-tg/bridge.js" | head -n 1 || true)
+    if [ -n "$tg_pid" ]; then
+        echo -e "${GREEN}ACTIVO (PID: $tg_pid)${RESET}"
+    else
+        echo -e "${RED}INACTIVO${RESET}"
+    fi
+    
+    # Estado de Nika
+    echo -ne "  ${BOLD}Agente Nika (JCode):${RESET} "
+    local nika_pid
+    nika_pid=$(pgrep -f "walkie agent.*--name Nika" | head -n 1 || true)
+    if [ -n "$nika_pid" ]; then
+        echo -e "${GREEN}ACTIVO (PID: $nika_pid)${RESET}"
+    else
+        echo -e "${RED}INACTIVO${RESET}"
+    fi
+    
+    # Estado de Nova y Kai
+    local total_agents
+    total_agents=$(pgrep -f "walkie agent walkie_chat" | wc -l)
+    echo -e "  ${BOLD}Total de agentes activos en canal:${RESET} ${CYAN}$total_agents${RESET}"
+    
+    # Chat ID vinculado
+    local chat_file="${HOME}/.config/walkie-tg/chat.json"
+    if [ -f "$chat_file" ]; then
+        local cid
+        cid=$(grep -o '"chatId": *[0-9]*' "$chat_file" | awk '{print $2}')
+        echo -e "  ${BOLD}Chat ID vinculado:${RESET} ${YELLOW}${cid:-No vinculado}${RESET}"
+    fi
+    echo ""
+}
+
+do_logs() {
+    echo -e "${CYAN}${BOLD}=== Últimos mensajes en Telegram ===${RESET}"
+    [ -f "$TG_LOG" ] && tail -n 10 "$TG_LOG" || echo "Sin logs de Telegram"
+    echo -e "\n${CYAN}${BOLD}=== Respuestas de Nika y la Flota ===${RESET}"
+    [ -f "$FLEET_LOG" ] && tail -n 10 "$FLEET_LOG" || echo "Sin logs de la flota"
+}
+
+case "$1" in
+    start|on|encender)
+        do_start
+        ;;
+    stop|off|apagar)
+        do_stop
+        ;;
+    restart|reiniciar)
+        do_stop
+        sleep 1
+        do_start
+        ;;
+    status|estado)
+        do_status
+        ;;
+    logs)
+        do_logs
+        ;;
+    *)
+        echo -e "${BOLD}Uso:${RESET} nika {start|stop|restart|status|logs}"
+        echo -e "  ${CYAN}nika on  / nika start${RESET}    -> Enciende todo (Telegram + Nika + WakeLock)"
+        echo -e "  ${CYAN}nika off / nika stop${RESET}     -> Apaga todo por completo"
+        echo -e "  ${CYAN}nika status${RESET}              -> Muestra el estado en vivo"
+        echo -e "  ${CYAN}nika logs${RESET}                -> Muestra los últimos mensajes de chat"
+        ;;
+esac
