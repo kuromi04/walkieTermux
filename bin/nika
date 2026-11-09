@@ -44,7 +44,14 @@ do_start() {
     
     # 4. Iniciar Guardián de Batería si no está corriendo
     if ! pgrep -f "nika-battery-guard" >/dev/null 2>&1; then
-        nohup "${HOME}/.local/bin/nika-battery-guard" </dev/null >/dev/null 2>&1 &
+        node -e "
+          const { spawn } = require('child_process');
+          const child = spawn('${HOME}/.local/bin/nika-battery-guard', [], {
+            detached: true,
+            stdio: 'ignore'
+          });
+          child.unref();
+        "
         echo -e "  [+] ${GREEN}Battery Guard activado${RESET} (auto-apagado si batería <= 15%)"
     fi
     
